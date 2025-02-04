@@ -18,12 +18,12 @@ jobs:
       CMAKE_VR_CONFIG_PRESET: ''
       CMAKE_VR_BUILD_PRESET: ''
       FOMOD_INCLUDE_PDB: true
-      FOMOD_MOD_NAME: "Light Placer"
+      FOMOD_MOD_NAME: "Base Object Placer"
       FOMOD_MOD_AUTHOR: "powerofthree"
-      FOMOD_MOD_NEXUS_ID: "127557"
+      FOMOD_MOD_NEXUS_ID: "140832"
       FOMOD_SE_MIN_GAME_VERSION: '1.5'
       FOMOD_AE_NAME: 'SSE v1.6+ ("Anniversary Edition")'
       FOMOD_AE_DESCR: 'Select this if you are using Skyrim Anniversary Edition v1.6 or higher.'
       FOMOD_AE_MIN_GAME_VERSION: '1.6'
       PUBLISH_ARCHIVE_TYPE: '7z'
-      VCPKG_COMMIT_ID: '80d54ff62d528339c626a6fbc3489a7f25956ade'
+      VCPKG_COMMIT_ID: '0ca64b4e1c70fa6d9f53b369b8f3f0843797c20c'
