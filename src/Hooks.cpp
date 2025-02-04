@@ -62,7 +62,7 @@ namespace Hooks
 		static void thunk(RE::TESObjectREFR* a_this)
 		{
 			logger::info("{:X} is picked up", a_this->GetFormID());
-			
+
 			func(a_this);
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
@@ -88,7 +88,7 @@ namespace Hooks
 			REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(19303, 19730) };
 			stl::hook_function_prologue<TESObjectREFR__Set3DSimple, 5>(target.address());
 		}
-	};*/ 
+	};*/
 
 	void Install()
 	{

@@ -11,8 +11,8 @@ class Manager :
 	public RE::BSTEventSink<RE::TESFormDeleteEvent>
 {
 public:
-	std::pair<bool,bool> ReadConfigs(bool a_reload = false);
-	void                 ReloadConfigs();
+	std::pair<bool, bool> ReadConfigs(bool a_reload = false);
+	void                  ReloadConfigs();
 
 	void OnDataLoad();
 

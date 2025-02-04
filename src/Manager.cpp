@@ -1,6 +1,6 @@
 #include "Manager.h"
 
-std::pair<bool,bool> Manager::ReadConfigs(bool a_reload)
+std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 {
 	logger::info("{:*^50}", a_reload ? "RELOAD" : "CONFIG FILES");
 

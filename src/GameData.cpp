@@ -11,7 +11,7 @@ Game::SourceData::SourceData(const Config::ObjectData& a_data, std::uint32_t a_a
 	extraData(a_data.extraData)
 {}
 
-Game::SourceData::SourceData(const Config::ObjectData& a_data):
+Game::SourceData::SourceData(const Config::ObjectData& a_data) :
 	SourceData(a_data, 0)
 {}
 

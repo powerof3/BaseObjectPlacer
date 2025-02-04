@@ -47,7 +47,7 @@ namespace Game
 			cells.clear();
 			objects.clear();
 		}
-		
+
 		// members
 		EditorIDObjectMap cells;
 		FormIDObjectMap   objects;

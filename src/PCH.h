@@ -8,8 +8,8 @@
 #include "SKSE/SKSE.h"
 
 #include "REX/REX/Singleton.h"
-#include <REX/W32/SHELL32.h>
 #include <REX/W32/OLE32.h>
+#include <REX/W32/SHELL32.h>
 
 #include <ClibUtil/RNG.hpp>
 #include <ClibUtil/distribution.hpp>
