@@ -1,7 +1,7 @@
 # Base Object Placer
 
 SKSE plugin and framework for dynamically placing objects, using configurable JSON files.
-*	[SSE/AE Version](https://www.nexusmods.com/skyrimspecialedition/mods/127557)
+*	[SSE/AE Version](https://www.nexusmods.com/skyrimspecialedition/mods/140832)
 *	[VR Version](https://www.nexusmods.com/skyrimspecialedition/mods/135822)
 
 ## Requirements
@@ -31,8 +31,8 @@ SKSE plugin and framework for dynamically placing objects, using configurable JS
 
 ## Building
 ```
-git clone https://github.com/powerof3/LightPlacer.git
-cd LightPlacer
+git clone https://github.com/powerof3/BaseObjectPlacer.git
+cd BaseObjectPlacer
 ```
 
 ### SSE
