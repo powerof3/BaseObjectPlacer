@@ -1,0 +1,17 @@
+{
+  "name": "base-object-placer",
+  "version-string": "1.0.0",
+  "description": "",
+  "homepage": "",
+  "license": "MIT",
+  "dependencies": [
+    "boost-unordered",
+    "clib-util",
+    "glaze",
+    "mergemapper",
+    "rsm-binary-io",
+    "spdlog",
+    "xbyak"
+  ],
+  "builtin-baseline": "80d54ff62d528339c626a6fbc3489a7f25956ade"
+}
