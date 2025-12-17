@@ -96,6 +96,6 @@ namespace Hooks
 		TESObjectREFR__FinishLoadGame::Install();
 		TESObjectREFR__InitHavok::Install();
 		//TESObjectREFR__Set3DSimple::Install();
-		TESObjectREFR__MarkedAsPickedUp::Install();
+		//TESObjectREFR__MarkedAsPickedUp::Install();
 	}
 }

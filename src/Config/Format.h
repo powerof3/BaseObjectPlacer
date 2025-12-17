@@ -22,3 +22,12 @@ namespace Config
 		ObjectMap objects;
 	};
 }
+
+template <>
+struct glz::meta<Config::Format>
+{
+	using T = Config::Format;
+	static constexpr auto value = object(
+		"cells", &T::cells,
+		"objects", &T::objects);
+};
