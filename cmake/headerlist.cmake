@@ -1,6 +1,6 @@
 set(headers ${headers}
-	src/Common.h
 	src/Config/Format.h
+	src/Config/ObjectArray.h
 	src/Config/ObjectData.h
 	src/Debug.h
 	src/GameData.h
@@ -8,4 +8,9 @@ set(headers ${headers}
 	src/Manager.h
 	src/PCH.h
 	src/RE.h
+	src/SharedData.h
+	src/SharedData/ConditionParser.h
+	src/SharedData/ExtraData.h
+	src/SharedData/Script.h
+	src/SharedData/Transform.h
 )

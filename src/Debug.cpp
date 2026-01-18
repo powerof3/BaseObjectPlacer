@@ -24,5 +24,6 @@ namespace Debug
 	{
 		logger::info("{:*^50}", "DEBUG");
 		ConsoleCommandHandler<ReloadConfig>::Install();
+		logger::info("{:*^50}", "SAVES");
 	}
 }

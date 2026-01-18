@@ -3,6 +3,18 @@
 #include "Config/Format.h"
 #include "GameData.h"
 
+struct CreatedObjects
+{
+	bool                                 empty() const noexcept { return map.empty(); }
+	std::size_t                          size() const noexcept { return map.size(); }
+	void                                 clear() noexcept { map.clear(); }
+	void                                 erase(RE::FormID a_formID);
+	std::optional<RE::BGSNumericIDIndex> find(std::size_t a_hash);
+
+	REL::Version                                version{ 1, 0, 0, 0 };
+	FlatMap<std::size_t, RE::BGSNumericIDIndex> map;  // [entry hash, ref]
+};
+
 class Manager :
 	public REX::Singleton<Manager>,
 	public RE::BSTEventSink<RE::TESCellFullyLoadedEvent>,
@@ -19,10 +31,15 @@ public:
 	std::optional<RE::BGSNumericIDIndex> GetSavedObject(std::size_t a_hash);
 	const Game::SourceData*              GetConfigObject(std::size_t a_hash);
 
-	void LoadFiles(const std::string& a_save);
-	void SaveFiles(const std::string& a_save);
-	void DeleteSavedFiles(const std::string& a_save);
+	void LoadFiles(std::string_view a_save);
+	void SaveFiles(std::string_view a_save);
+	void DeleteSavedFiles(std::string_view a_save);
+	void CleanupSavedFiles();
+
 	void ClearSavedObjects(bool a_deleteObjects = false);
+
+	void        SerializeHash(std::size_t hash, RE::ExtraCachedScale* a_scaleExtra);
+	std::size_t DeserializeHash(RE::ExtraCachedScale* a_scaleExtra);
 
 	std::size_t GetSerializedObject(RE::TESObjectREFR* a_ref);
 	void        UpdateSerializedObjectHavok(RE::TESObjectREFR* a_ref);
@@ -41,12 +58,15 @@ private:
 		}
 	};
 
+	void SpawnInCell(RE::TESObjectCELL* a_cell);
+	void SpawnAtReference(RE::TESObjectREFR* a_ref);
+
 	void ProcessConfigs();
 	void ProcessConfigObjects();
 	void PlaceInLoadedArea();
 
 	std::optional<std::filesystem::path> GetSaveDirectory();
-	std::optional<std::filesystem::path> GetFile(const std::string& a_save);
+	std::optional<std::filesystem::path> GetFile(std::string_view a_save);
 
 	template <class F>
 	bool VisitSerializedObject(RE::TESObjectREFR* a_ref, F&& func)
@@ -69,10 +89,18 @@ private:
 	// members
 	Config::Format                                configs;
 	Game::Format                                  game;
-	StringMap<FlatSet<std::size_t>>               uuidHashes;     // [uuid, entry hashes]
 	FlatMap<std::size_t, const Game::SourceData*> configObjects;  // [entry hash, ptr to object inside configs]
-	FlatMap<std::size_t, RE::BGSNumericIDIndex>   savedObjects;   // [entry hash, ref]
+	CreatedObjects                                createdObjects;
+	CreatedObjects                                savedObjects;
 	std::optional<std::filesystem::path>          saveDirectory;
-	std::vector<RE::BGSNumericIDIndex>            createdObjects;
 	bool                                          loadingSave{ false };
+};
+
+template <>
+struct glz::meta<CreatedObjects>
+{
+	using T = CreatedObjects;
+	static constexpr auto value = object(
+		"version", &T::version,
+		"objects", &T::map);
 };

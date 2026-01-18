@@ -2,30 +2,9 @@
 
 namespace RE
 {
-
-	FormID GetFormID(const std::string& a_str)
+	TESForm* GetForm(const std::string& a_str)
 	{
-		if (const auto splitID = string::split(a_str, "~"); splitID.size() == 2) {
-			const auto  formID = string::to_num<FormID>(splitID[0], true);
-			const auto& modName = splitID[1];
-			if (g_mergeMapperInterface) {
-				const auto [mergedModName, mergedFormID] = g_mergeMapperInterface->GetNewFormID(modName.c_str(), formID);
-				return TESDataHandler::GetSingleton()->LookupFormID(mergedFormID, mergedModName);
-			}
-			return TESDataHandler::GetSingleton()->LookupFormID(formID, modName);
-		}
-		if (string::is_only_hex(a_str, true)) {
-			return string::to_num<FormID>(a_str, true);
-		}
-		if (const auto form = TESForm::LookupByEditorID(a_str)) {
-			return form->GetFormID();
-		}
-		return 0;
-	}
-
-	std::string GetEditorID(const std::string& a_str)
-	{
-		RE::TESForm* form = nullptr;
+		TESForm* form = nullptr;
 		if (const auto splitID = string::split(a_str, "~"); splitID.size() == 2) {
 			const auto  formID = string::to_num<FormID>(splitID[0], true);
 			const auto& modName = splitID[1];
@@ -35,14 +14,24 @@ namespace RE
 			} else {
 				form = TESDataHandler::GetSingleton()->LookupForm(formID, modName);
 			}
+		} else if (string::is_only_hex(a_str, true)) {
+			form = TESForm::LookupByID(string::to_num<FormID>(a_str, true));
+		} else {
+			form = TESForm::LookupByEditorID(a_str);
 		}
-		if (string::is_only_hex(a_str, true)) {
-			form = RE::TESForm::LookupByID(string::to_num<FormID>(a_str, true));
-		}
-		if (form) {
-			return form->GetFormEditorID();
-		}
-		return a_str;
+		return form;
+	}
+
+	FormID GetFormID(const std::string& a_str)
+	{
+		auto form = GetForm(a_str);
+		return form ? form->GetFormID() : 0;
+	}
+
+	std::string GetEditorID(const std::string& a_str)
+	{
+		auto form = GetForm(a_str);
+		return form ? clib_util::editorID::get_editorID(form) : "";
 	}
 
 	bool CanBeMoved(const TESObjectREFRPtr& a_refr)
@@ -67,6 +56,21 @@ namespace RE
 		}
 	}
 
+	std::uint32_t GetNumReferenceHandles()
+	{
+		const auto refrArray = RE::BSPointerHandleManager<RE::TESObjectREFR*>::GetHandleEntries();
+
+		std::uint32_t activeHandleCount = 0;
+
+		for (auto& val : refrArray) {
+			if ((val.handleEntryBits & (1 << 26)) != 0) {
+				activeHandleCount++;
+			}
+		}
+
+		return activeHandleCount;
+	}
+
 	bool GetMaxFormIDReached()
 	{
 		return (RE::TESDataHandler::GetSingleton()->nextID & 0xFFFFFF) >= 0x3FFFFF;
@@ -77,27 +81,12 @@ namespace RE
 		return RE::TESForm::LookupByID(a_formID) || RE::BGSSaveLoadGame::GetSingleton()->IsFormIDInUse(a_formID);
 	}
 
-	NiPoint3 ApplyRotation(const NiPoint3& point, const NiPoint3& pivot, const NiPoint3& rotationOffset)
+	NiPoint3 ApplyRotation(const NiPoint3& point, const NiPoint3& pivot, const RE::NiMatrix3& rotationMatrix)
 	{
-		// Translate point to pivot space
-		auto translatedPoint = point - pivot;
-
-		float theta = rotationOffset.Length();
-
-		if (theta == 0) {
-			return point;  // No rotation
-		}
-
-		auto k = rotationOffset / theta;  // Rotation axis
-
-		// Rodrigues' rotation formula
-		auto rotatedPoint =
-			translatedPoint * std::cos(theta) +
-			k.Cross(translatedPoint) * std::sin(theta) +
-			k * (k.Dot(translatedPoint) * (1 - std::cos(theta)));
-
-		// Translate back to original space
-		return rotatedPoint + pivot;
+		// Translate point to local space
+		RE::NiPoint3 localPoint = point - pivot;
+		RE::NiPoint3 rotatedLocal = rotationMatrix * localPoint;
+		return rotatedLocal + pivot;
 	}
 
 	void WrapAngle(NiPoint3& a_angle)
@@ -119,18 +108,22 @@ namespace RE
 		auto low = static_cast<uint32_t>(value);
 		auto high = static_cast<uint32_t>(value >> 32);
 
-		std::memcpy(&lowFloat, &low, sizeof(float));
-		std::memcpy(&highFloat, &high, sizeof(float));
+		lowFloat = std::bit_cast<float>(low);
+		highFloat = std::bit_cast<float>(high);
 	}
 
 	std::size_t RecombineValue(float lowFloat, float highFloat)
 	{
-		std::uint32_t low;
-		std::uint32_t high;
-
-		std::memcpy(&low, &lowFloat, sizeof(float));
-		std::memcpy(&high, &highFloat, sizeof(float));
+		auto low = std::bit_cast<std::uint32_t>(lowFloat);
+		auto high = std::bit_cast<std::uint32_t>(highFloat);
 
 		return (static_cast<std::size_t>(high) << 32) | low;
+	}
+
+	void InitScripts(TESObjectREFR* a_ref)
+	{
+		using func_t = decltype(&InitScripts);
+		static REL::Relocation<func_t> func{ RELOCATION_ID(19245, 19671) };
+		return func(a_ref);
 	}
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 
 #include <shared_mutex>
@@ -20,6 +21,7 @@
 #include <glaze/glaze.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <xbyak/xbyak.h>
+#include <srell.hpp>
 
 #include "ClibUtil/editorID.hpp"
 
@@ -31,6 +33,7 @@ namespace dist = clib_util::distribution;
 
 using namespace std::literals;
 using namespace clib_util::string::literals;
+using namespace RE::literals;
 
 // for visting variants
 template <class... Ts>
@@ -44,6 +47,23 @@ using FlatMap = boost::unordered_flat_map<K, D, H, KEqual>;
 
 template <class K, class H = boost::hash<K>, class KEqual = std::equal_to<K>>
 using FlatSet = boost::unordered_flat_set<K, H, KEqual>;
+
+namespace hash
+{
+	template <typename... Args>
+	inline std::size_t combine(const Args&... args)
+	{
+		std::size_t seed = 0;
+		(boost::hash_combine(seed, args), ...);
+		return seed;
+	}
+}
+
+#define GENERATE_HASH(Type, ...)                                            \
+	[[nodiscard]] friend std::size_t hash_value(const Type& a_val) noexcept \
+	{                                                                       \
+		return hash::combine(__VA_ARGS__);                                  \
+	}
 
 struct string_hash
 {
@@ -130,18 +150,12 @@ namespace stl
 
 		T::func = reinterpret_cast<std::uintptr_t>(alloc);
 	}
-
-	template <typename... Args>
-	std::size_t hash_combine(const Args&... args)
-	{
-		std::size_t seed = 0;
-		(boost::hash_combine(seed, args), ...);
-		return seed;
-	}
 }
 
 #include "RE.h"
 #include "Version.h"
+
+
 
 #ifdef SKYRIM_AE
 #	define OFFSET(se, ae) ae

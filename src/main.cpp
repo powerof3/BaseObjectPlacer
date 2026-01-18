@@ -32,20 +32,22 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 		break;
 	case SKSE::MessagingInterface::kSaveGame:
 		{
-			std::string savePath = { static_cast<char*>(a_message->data), a_message->dataLen };
+			std::string_view savePath(static_cast<const char*>(a_message->data), a_message->dataLen);
 			Manager::GetSingleton()->SaveFiles(savePath);
 		}
 		break;
 	case SKSE::MessagingInterface::kPreLoadGame:
 		{
-			std::string savePath = { static_cast<char*>(a_message->data), a_message->dataLen };
-			string::replace_last_instance(savePath, ".ess", "");
+			std::string_view savePath(static_cast<const char*>(a_message->data), a_message->dataLen);
+			if (savePath.ends_with(".ess")) {
+				savePath.remove_suffix(4);
+			}
 			Manager::GetSingleton()->LoadFiles(savePath);
 		}
 		break;
 	case SKSE::MessagingInterface::kDeleteGame:
 		{
-			std::string savePath = { static_cast<char*>(a_message->data), a_message->dataLen };
+			std::string_view savePath(static_cast<const char*>(a_message->data), a_message->dataLen);
 			Manager::GetSingleton()->DeleteSavedFiles(savePath);
 		}
 		break;
@@ -65,7 +67,7 @@ extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 	v.AuthorName("powerofthree");
 	v.UsesAddressLibrary();
 	v.UsesUpdatedStructs();
-	v.CompatibleVersions({ SKSE::RUNTIME_LATEST });
+	v.CompatibleVersions({ SKSE::RUNTIME_SSE_LATEST });
 
 	return v;
 }();
@@ -86,7 +88,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 #	ifdef SKYRIMVR
 		SKSE::RUNTIME_VR_1_4_15
 #	else
-		SKSE::RUNTIME_1_5_39
+		SKSE::RUNTIME_SSE_1_5_39
 #	endif
 	) {
 		logger::critical(FMT_STRING("Unsupported runtime version {}"), ver.string());
