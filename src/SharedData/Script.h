@@ -70,7 +70,7 @@ namespace BSScript
 							   },
 							   [&](const auto& a_val) {
 								   gameValue = a_val;
-							   }},
+							   } },
 					prop);
 				properties.emplace_back(propName, gameValue);
 			}

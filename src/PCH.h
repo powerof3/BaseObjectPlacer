@@ -20,8 +20,8 @@
 #include <boost/unordered/unordered_flat_set.hpp>
 #include <glaze/glaze.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
-#include <xbyak/xbyak.h>
 #include <srell.hpp>
+#include <xbyak/xbyak.h>
 
 #include "ClibUtil/editorID.hpp"
 
@@ -154,8 +154,6 @@ namespace stl
 
 #include "RE.h"
 #include "Version.h"
-
-
 
 #ifdef SKYRIM_AE
 #	define OFFSET(se, ae) ae

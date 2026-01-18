@@ -726,9 +726,9 @@ bool ConditionParser::ParseVoidParam(const std::string& a_str, VOID_PARAM& a_par
 std::unique_ptr<RE::TESCondition> ConditionParser::BuildCondition(const std::vector<std::string>& a_conditionList)
 {
 	static srell::regex condRegex{ R"((\w+)?\s*(\w+)\s+(\w+)(?:\s+(\w+))?\s*([=!<>]+)\s*([\d.]+)\s*(AND|OR)?)" };
-	
+
 	auto conditionPtr = std::make_unique<RE::TESCondition>();
-	
+
 	for (auto& condition : a_conditionList) {
 		srell::cmatch match;
 		if (!srell::regex_match(condition.c_str(), match, condRegex)) {

@@ -20,8 +20,8 @@ private:
 		RE::TESForm* ptr;
 	};
 
-	static PARAMS       GetFuncType(FUNC_ID a_funcID);
-	static bool         ParseVoidParam(const std::string& a_str, VOID_PARAM& a_param, PARAM_TYPE a_type);
+	static PARAMS GetFuncType(FUNC_ID a_funcID);
+	static bool   ParseVoidParam(const std::string& a_str, VOID_PARAM& a_param, PARAM_TYPE a_type);
 
 	// members
 	inline static const FlatMap<std::string_view, std::uint32_t> funcIDs{

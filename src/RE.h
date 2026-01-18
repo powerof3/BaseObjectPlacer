@@ -18,8 +18,8 @@ namespace RE
 	}
 
 	RE::TESForm* GetForm(const std::string& a_str);
-	FormID      GetFormID(const std::string& a_str);
-	std::string GetEditorID(const std::string& a_str);
+	FormID       GetFormID(const std::string& a_str);
+	std::string  GetEditorID(const std::string& a_str);
 
 	bool CanBeMoved(const TESObjectREFRPtr& a_refr);
 
