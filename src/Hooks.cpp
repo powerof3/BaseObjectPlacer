@@ -42,7 +42,7 @@ namespace Hooks
 		CheckSaveGame<RE::TESObjectREFR>::Install();
 		CheckSaveGame<RE::Hazard>::Install();
 		CheckSaveGame<RE::ArrowProjectile>::Install();
-		
+
 		FinishLoadGame<RE::TESObjectREFR>::Install();
 		FinishLoadGame<RE::Hazard>::Install();
 		FinishLoadGame<RE::ArrowProjectile>::Install();

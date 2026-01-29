@@ -256,7 +256,7 @@ void Manager::LoadFiles(std::string_view a_save)
 	loadingSave = true;
 
 	logger::info("Loading save {}", a_save);
-	
+
 	logger::info("\tDeleting {} temp objects", tempObjects.size());
 	tempObjects.clear(true);
 

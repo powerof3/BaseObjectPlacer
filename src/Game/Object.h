@@ -16,7 +16,7 @@ namespace Game
 		SharedData(const Config::SharedData& a_data);
 
 		bool IsTemporary() const;
-	
+
 		void SetPropertiesHavok(RE::TESObjectREFR* a_ref, RE::NiAVObject* a_root) const;
 		void SetPropertiesFlags(RE::TESObjectREFR* a_ref) const;
 		void AttachScripts(RE::TESObjectREFR* a_ref) const;

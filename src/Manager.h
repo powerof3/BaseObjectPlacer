@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Config/Format.h"
-#include "Game/Object.h"
 #include "Game/CreatedObject.h"
+#include "Game/Object.h"
 
 class Manager :
 	public REX::Singleton<Manager>,

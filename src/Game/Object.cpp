@@ -218,27 +218,27 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 	}
 
 	for (auto& instance : instances) {
-		if (auto id = Manager::GetSingleton()->GetSavedObject(instance.hash); id != 0) { 
+		if (auto id = Manager::GetSingleton()->GetSavedObject(instance.hash); id != 0) {
 			logger::info("\t[{:X}]{:X} already exists, skipping spawn.", instance.hash, id);
 			continue;
 		}
-		
+
 		if (RE::GetNumReferenceHandles() >= 1000000 || RE::GetMaxFormIDReached()) {  // max id reached
 			continue;
 		}
 
 		auto transform = instance.GetTransform(a_ref);
-		
+
 		auto createdRefHandle = a_dataHandler->CreateReferenceAtLocation(
-			forms[instance.baseIndex], 
-			transform.translate, 
-			transform.rotate, 
-			a_cell, 
-			a_worldSpace, 
-			nullptr, 
-			nullptr, 
-			{}, 
-			false, 
+			forms[instance.baseIndex],
+			transform.translate,
+			transform.rotate,
+			a_cell,
+			a_worldSpace,
+			nullptr,
+			nullptr,
+			{},
+			false,
 			true);
 
 		if (auto createdRef = createdRefHandle.get()) {
@@ -249,7 +249,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 
 			Manager::GetSingleton()->SerializeObject(instance.hash, createdRef, data.IsTemporary());
 
-			logger::info("\tSpawning new object {:X} with hash {:X}.", createdRef->GetFormID(), instance.hash);	
+			logger::info("\tSpawning new object {:X} with hash {:X}.", createdRef->GetFormID(), instance.hash);
 		}
 	}
 }

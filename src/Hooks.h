@@ -65,7 +65,7 @@ namespace Hooks
 			logger::info("Installing {}::InitHavok hook", typeid(T).name());
 			stl::write_vfunc<T, InitHavok>();
 		}
-	};	
-	
+	};
+
 	void Install();
 }

@@ -13,7 +13,7 @@ namespace Config
 	struct SharedData
 	{
 		bool RollChance(std::size_t seed) const;
-		
+
 		ConfigExtraData                                   extraData;
 		BSScript::ConfigScripts                           scripts;
 		std::vector<std::string>                          conditions;

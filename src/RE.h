@@ -12,7 +12,7 @@ namespace RE
 	{
 		return std::tie(lhs.data1, lhs.data2, lhs.data3) == std::tie(rhs.data1, rhs.data2, rhs.data3);
 	}
-	
+
 	inline std::size_t hash_value(const BGSNumericIDIndex& a_val) noexcept
 	{
 		return hash::combine(a_val.data1, a_val.data2, a_val.data3);
