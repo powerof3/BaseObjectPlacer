@@ -1,9 +1,10 @@
 set(headers ${headers}
 	src/Config/Format.h
+	src/Config/Object.h
 	src/Config/ObjectArray.h
-	src/Config/ObjectData.h
 	src/Debug.h
-	src/GameData.h
+	src/Game/CreatedObject.h
+	src/Game/Object.h
 	src/Hooks.h
 	src/Manager.h
 	src/PCH.h

@@ -1,14 +1,10 @@
 #pragma once
 
-#include "ObjectData.h"
+#include "Object.h"
 
 namespace Config
 {
-	using ObjectMap = StringMap<std::vector<ObjectData>>;
-	using ConditionMap = std::vector<
-		std::pair<
-			std::vector<std::string>,
-			std::vector<ObjectData>>>;
+	using ObjectMap = StringMap<std::vector<Object>>;
 
 	struct Format
 	{

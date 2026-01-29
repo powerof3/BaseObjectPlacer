@@ -1,6 +1,6 @@
-#include "GameData.h"
+#include "Game/Object.h"
 
-#include "Config/ObjectData.h"
+#include "Config/Object.h"
 #include "Manager.h"
 
 Game::SharedData::SharedData(const Config::SharedData& a_data) :
@@ -30,26 +30,37 @@ void Game::SharedData::SetPropertiesHavok([[maybe_unused]] RE::TESObjectREFR* a_
 
 void Game::SharedData::SetPropertiesFlags(RE::TESObjectREFR* a_ref) const
 {
+	bool changedFlags = false;
 	if (flags.any(Data::ReferenceFlags::kNoAIAcquire)) {
 		a_ref->formFlags |= RE::TESObjectREFR::RecordFlags::kNoAIAcquire;
+		changedFlags = true;
 	}
 	if (flags.any(Data::ReferenceFlags::kInitiallyDisabled)) {
 		a_ref->formFlags |= RE::TESObjectREFR::RecordFlags::kInitiallyDisabled;
+		changedFlags = true;
 	}
 	if (flags.any(Data::ReferenceFlags::kHiddenFromLocalMap)) {
 		a_ref->SetOnLocalMap(false);
+		changedFlags = true;
 	}
 	if (flags.any(Data::ReferenceFlags::kInaccessible)) {
 		a_ref->formFlags |= RE::TESObjectREFR::RecordFlags::kInaccessible;
+		changedFlags = true;
 	}
 	if (flags.any(Data::ReferenceFlags::kIgnoredBySandbox)) {
 		a_ref->formFlags |= RE::TESObjectACTI::RecordFlags::kIgnoresObjectInteraction;
+		changedFlags = true;
 	}
 	if (flags.any(Data::ReferenceFlags::kOpenByDefault)) {
 		RE::BGSOpenCloseForm::SetOpenState(a_ref, true, true);
+		a_ref->AddChange(RE::TESObjectREFR::ChangeFlags::kGameOnlyExtra);
 	}
 	if (flags.any(Data::ReferenceFlags::kIsFullLOD)) {
 		a_ref->formFlags |= RE::TESObjectREFR::RecordFlags::kIsFullLOD;
+		changedFlags = true;
+	}
+	if (changedFlags) {
+		a_ref->AddChange(RE::TESForm::ChangeFlags::kFlags);
 	}
 }
 
@@ -70,23 +81,6 @@ void Game::SharedData::AttachScripts(RE::TESObjectREFR* a_ref) const
 	}
 
 	for (const auto& [scriptName, properties, autoFill] : scripts) {
-		bool alreadyAttached = false;
-
-		if (auto it = vm->attachedScripts.find(handle); it != vm->attachedScripts.end()) {
-			for (auto& attachedScript : it->second) {
-				if (auto* typeInfo = attachedScript->GetTypeInfo()) {
-					if (string::iequals(typeInfo->GetName(), scriptName)) {
-						alreadyAttached = true;
-						break;
-					}
-				}
-			}
-		}
-
-		if (alreadyAttached) {
-			continue;
-		}
-
 		RE::BSTSmartPointer<RE::BSScript::Object> objectPtr;
 		if (!vm->CreateObject(scriptName, objectPtr) || !objectPtr) {
 			continue;
@@ -187,63 +181,75 @@ void Game::SharedData::AttachScripts(RE::TESObjectREFR* a_ref) const
 	}
 }
 
-Game::SourceData::SourceData(std::shared_ptr<SharedData> a_data, std::uint32_t a_attachID) :
-	attachID(a_attachID),
+Game::Object::Object(const Config::SharedData& a_data) :
 	data(a_data)
 {}
 
-Game::SourceData::SourceData(std::shared_ptr<SharedData> a_data) :
-	SourceData(std::move(a_data), 0)
-{}
-
-bool Game::SourceData::IsTemporary(const RE::TESObjectREFRPtr& a_ref) const
+RE::BSTransform Game::Object::Instance::GetTransform(RE::TESObjectREFR* a_ref) const
 {
-	return data->IsTemporary() || !RE::CanBeMoved(a_ref);
-}
-
-RE::BSTransform Game::SourceData::GetTransform(RE::TESObjectREFR* a_ref) const
-{
-	RE::BSTransform    newTransform = transform;
-	RE::TESObjectREFR* ref = a_ref;
-	if (!ref) {
-		ref = RE::TESForm::LookupByID<RE::TESObjectREFR>(attachID);
-	}
-	if (ref) {
-		newTransform.translate += ref->GetPosition();
-
-		newTransform.rotate += ref->GetAngle();
+	RE::BSTransform newTransform = transform;
+	if (a_ref) {
+		newTransform.translate += a_ref->GetPosition();
+		newTransform.rotate += a_ref->GetAngle();
 		RE::WrapAngle(newTransform.rotate);
 	}
 	return newTransform;
 }
 
-void Game::SourceData::SetProperties(RE::TESObjectREFR* a_ref) const
+void Game::Object::SetProperties(RE::TESObjectREFR* a_ref, std::size_t hash) const
 {
-	a_ref->SetScale(transform.scale);
-	data->SetPropertiesFlags(a_ref);
-	data->AttachScripts(a_ref);
-	data->extraData.AddExtraData(a_ref, hash);
+	data.SetPropertiesFlags(a_ref);
+	data.AttachScripts(a_ref);
+	data.extraData.AddExtraData(a_ref, hash);
 }
 
-void Game::SourceData::SpawnObject(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace) const
+void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace) const
 {
-	if (Manager::GetSingleton()->GetSavedObject(hash) || RE::GetNumReferenceHandles() >= 1000000 || RE::GetMaxFormIDReached()) {  // max id reached
-		return;
-	}
-
-	if (data->conditions) {
+	if (data.conditions) {
 		auto conditionRef = a_ref ? a_ref : RE::PlayerCharacter::GetSingleton();
-		if (!data->conditions->IsTrue(conditionRef, conditionRef)) {
+		if (!data.conditions->IsTrue(conditionRef, conditionRef)) {
 			return;
 		}
 	}
 
-	if (auto form = RE::TESForm::LookupByID<RE::TESBoundObject>(baseID)) {
-		auto newTransform = GetTransform(a_ref);
-		auto createdRefHandle = RE::TESDataHandler::GetSingleton()->CreateReferenceAtLocation(form, newTransform.translate, newTransform.rotate, a_cell, a_worldSpace, nullptr, nullptr, {}, false, true);
+	std::vector<RE::TESBoundObject*> forms;
+	for (auto& baseID : bases) {
+		forms.emplace_back(RE::TESForm::LookupByID<RE::TESBoundObject>(baseID));
+	}
+
+	for (auto& instance : instances) {
+		if (auto id = Manager::GetSingleton()->GetSavedObject(instance.hash); id != 0) { 
+			logger::info("\t[{:X}]{:X} already exists, skipping spawn.", instance.hash, id);
+			continue;
+		}
+		
+		if (RE::GetNumReferenceHandles() >= 1000000 || RE::GetMaxFormIDReached()) {  // max id reached
+			continue;
+		}
+
+		auto transform = instance.GetTransform(a_ref);
+		
+		auto createdRefHandle = a_dataHandler->CreateReferenceAtLocation(
+			forms[instance.baseIndex], 
+			transform.translate, 
+			transform.rotate, 
+			a_cell, 
+			a_worldSpace, 
+			nullptr, 
+			nullptr, 
+			{}, 
+			false, 
+			true);
+
 		if (auto createdRef = createdRefHandle.get()) {
-			Manager::GetSingleton()->SerializeObject(hash, createdRef, IsTemporary(createdRef));
-			SetProperties(createdRef.get());
+			createdRef->SetScale(transform.scale);
+			createdRef->AddChange(RE::TESObjectREFR::ChangeFlags::kScale);
+
+			SetProperties(createdRef.get(), instance.hash);
+
+			Manager::GetSingleton()->SerializeObject(instance.hash, createdRef, data.IsTemporary());
+
+			logger::info("\tSpawning new object {:X} with hash {:X}.", createdRef->GetFormID(), instance.hash);	
 		}
 	}
 }

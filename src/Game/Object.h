@@ -5,17 +5,18 @@
 namespace Config
 {
 	struct SharedData;
-	class ObjectData;
+	class Object;
 }
 
 namespace Game
 {
 	struct SharedData
 	{
+		SharedData() = default;
 		SharedData(const Config::SharedData& a_data);
 
 		bool IsTemporary() const;
-
+	
 		void SetPropertiesHavok(RE::TESObjectREFR* a_ref, RE::NiAVObject* a_root) const;
 		void SetPropertiesFlags(RE::TESObjectREFR* a_ref) const;
 		void AttachScripts(RE::TESObjectREFR* a_ref) const;
@@ -23,7 +24,7 @@ namespace Game
 		// members
 		GameExtraData                                     extraData;
 		BSScript::GameScripts                             scripts;
-		std::unique_ptr<RE::TESCondition>                 conditions;
+		std::shared_ptr<RE::TESCondition>                 conditions;
 		Data::MotionType                                  motionType;
 		REX::EnumSet<Data::ReferenceFlags, std::uint32_t> flags;
 		float                                             chance{ 1.0f };
@@ -79,31 +80,32 @@ namespace Game
 		}
 	};
 
-	class SourceData
+	class Object
 	{
 	public:
-		SourceData() = default;
-		SourceData(std::shared_ptr<SharedData> a_data, std::uint32_t a_attachID);
-		SourceData(std::shared_ptr<SharedData> a_data);
+		struct Instance
+		{
+			RE::BSTransform GetTransform(RE::TESObjectREFR* a_ref) const;
 
-		bool IsTemporary(const RE::TESObjectREFRPtr& a_ref) const;
+			std::uint32_t   baseIndex{ 0 };
+			RE::BSTransform transform;
+			std::size_t     hash;
+		};
 
-		RE::BSTransform GetTransform(RE::TESObjectREFR* a_ref) const;
+		Object() = default;
+		Object(const Config::SharedData& a_data);
 
-		void SetProperties(RE::TESObjectREFR* a_ref) const;
-
-		void SpawnObject(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace) const;
+		void SetProperties(RE::TESObjectREFR* a_ref, std::size_t hash) const;
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace) const;
 
 		// members
-		RE::FormID                  attachID{ 0 };
-		RE::FormID                  baseID{ 0 };
-		RE::BSTransform             transform;
-		std::shared_ptr<SharedData> data;
-		std::size_t                 hash{ 0 };
+		SharedData              data;
+		std::vector<RE::FormID> bases;
+		std::vector<Instance>   instances;
 	};
 
-	using FormIDObjectMap = FlatMap<RE::FormID, std::vector<SourceData>>;
-	using EditorIDObjectMap = StringMap<std::vector<SourceData>>;
+	using FormIDObjectMap = FlatMap<RE::FormID, std::vector<Game::Object>>;
+	using EditorIDObjectMap = StringMap<std::vector<Game::Object>>;
 
 	struct Format
 	{

@@ -5,13 +5,15 @@
 
 namespace Game
 {
-	class SourceData;
+	class Object;
 }
 
 namespace Config
 {
 	struct SharedData
 	{
+		bool RollChance(std::size_t seed) const;
+		
 		ConfigExtraData                                   extraData;
 		BSScript::ConfigScripts                           scripts;
 		std::vector<std::string>                          conditions;
@@ -29,21 +31,11 @@ namespace Config
 			a_val.chance);
 	};
 
-	class ObjectData
+	class Object
 	{
 	public:
 		void GenerateHash();
-		void CreateGameSourceData(std::vector<Game::SourceData>& a_srcDataVec, RE::FormID a_attachFormID, std::string_view a_attachForm) const;
-
-		template <class T>
-		std::size_t GenerateHash(const T& a_attachForm, std::size_t a_baseIdx, std::size_t a_transformIdx) const
-		{
-			return hash::combine(
-				a_attachForm,
-				baseHash,
-				a_baseIdx,
-				a_transformIdx);
-		}
+		void CreateGameObject(std::vector<Game::Object>& a_objectVec, const std::variant<RE::FormID, std::string_view>& a_attachID) const;
 
 		// members
 		std::string                       uuid;
@@ -55,7 +47,7 @@ namespace Config
 	};
 }
 
-using ConfigObject = Config::ObjectData;
+using ConfigObject = Config::Object;
 
 template <>
 struct glz::meta<ConfigObject>

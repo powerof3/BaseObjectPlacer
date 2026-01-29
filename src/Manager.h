@@ -1,19 +1,8 @@
 #pragma once
 
 #include "Config/Format.h"
-#include "GameData.h"
-
-struct CreatedObjects
-{
-	bool                                 empty() const noexcept { return map.empty(); }
-	std::size_t                          size() const noexcept { return map.size(); }
-	void                                 clear() noexcept { map.clear(); }
-	void                                 erase(RE::FormID a_formID);
-	std::optional<RE::BGSNumericIDIndex> find(std::size_t a_hash);
-
-	REL::Version                                version{ 1, 0, 0, 0 };
-	FlatMap<std::size_t, RE::BGSNumericIDIndex> map;  // [entry hash, ref]
-};
+#include "Game/Object.h"
+#include "Game/CreatedObject.h"
 
 class Manager :
 	public REX::Singleton<Manager>,
@@ -28,24 +17,27 @@ public:
 
 	void OnDataLoad();
 
-	std::optional<RE::BGSNumericIDIndex> GetSavedObject(std::size_t a_hash);
-	const Game::SourceData*              GetConfigObject(std::size_t a_hash);
+	RE::FormID          GetSavedObject(std::size_t a_hash);
+	const Game::Object* GetConfigObject(std::size_t a_hash);
 
 	void LoadFiles(std::string_view a_save);
 	void SaveFiles(std::string_view a_save);
 	void DeleteSavedFiles(std::string_view a_save);
 	void CleanupSavedFiles();
 
+	bool IsTempObject(RE::TESObjectREFR* a_ref);
+	void ClearTempObject(RE::TESObjectREFR* a_ref);
+
 	void ClearSavedObjects(bool a_deleteObjects = false);
 
 	void        SerializeHash(std::size_t hash, RE::ExtraCachedScale* a_scaleExtra);
 	std::size_t DeserializeHash(RE::ExtraCachedScale* a_scaleExtra);
 
-	std::size_t GetSerializedObject(RE::TESObjectREFR* a_ref);
-	void        UpdateSerializedObjectHavok(RE::TESObjectREFR* a_ref);
-	void        SerializeObject(std::size_t hash, const RE::TESObjectREFRPtr& a_ref, bool a_temporary);
+	RE::ExtraCachedScale* GetSerializedObjectData(RE::TESObjectREFR* a_ref);
+	std::size_t           GetSerializedObjectHash(RE::TESObjectREFR* a_ref);
+	void                  UpdateSerializedObjectHavok(RE::TESObjectREFR* a_ref);
+	void                  SerializeObject(std::size_t hash, const RE::TESObjectREFRPtr& a_ref, bool a_temporary);
 
-	void LoadSerializedObject(RE::TESObjectREFR* a_ref);
 	void FinishLoadSerializedObject(RE::TESObjectREFR* a_ref);
 
 private:
@@ -71,9 +63,9 @@ private:
 	template <class F>
 	bool VisitSerializedObject(RE::TESObjectREFR* a_ref, F&& func)
 	{
-		if (auto hash = GetSerializedObject(a_ref); hash != 0) {
-			if (auto sourceData = GetConfigObject(hash)) {
-				func(sourceData);
+		if (auto hash = GetSerializedObjectHash(a_ref); hash != 0) {
+			if (auto object = GetConfigObject(hash)) {
+				func(object, hash);
 				return true;
 			}
 		}
@@ -87,20 +79,11 @@ private:
 	RE::BSEventNotifyControl ProcessEvent(const RE::TESFormDeleteEvent* a_event, RE::BSTEventSource<RE::TESFormDeleteEvent>*) override;
 
 	// members
-	Config::Format                                configs;
-	Game::Format                                  game;
-	FlatMap<std::size_t, const Game::SourceData*> configObjects;  // [entry hash, ptr to object inside configs]
-	CreatedObjects                                createdObjects;
-	CreatedObjects                                savedObjects;
-	std::optional<std::filesystem::path>          saveDirectory;
-	bool                                          loadingSave{ false };
-};
-
-template <>
-struct glz::meta<CreatedObjects>
-{
-	using T = CreatedObjects;
-	static constexpr auto value = object(
-		"version", &T::version,
-		"objects", &T::map);
+	Config::Format                            configs;
+	Game::Format                              game;
+	FlatMap<std::size_t, const Game::Object*> configObjects;  // static. [entry hash, ptr to game object inside configs]
+	CreatedObjects                            savedObjects;
+	CreatedObjects                            tempObjects;
+	std::optional<std::filesystem::path>      saveDirectory;
+	bool                                      loadingSave{ false };
 };

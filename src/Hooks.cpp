@@ -4,60 +4,7 @@
 
 namespace Hooks
 {
-	struct TESObjectREFR__LoadGame
-	{
-		static void thunk(RE::TESObjectREFR* a_this, RE::BGSLoadFormBuffer* a_buf)
-		{
-			func(a_this, a_buf);
-
-			Manager::GetSingleton()->LoadSerializedObject(a_this);
-		}
-		static inline REL::Relocation<decltype(thunk)> func;
-		static constexpr std::size_t                   idx{ 0xF };
-
-		static void Install()
-		{
-			stl::write_vfunc<RE::TESObjectREFR, TESObjectREFR__LoadGame>();
-		}
-	};
-
-	struct TESObjectREFR__FinishLoadGame
-	{
-		static void thunk(RE::TESObjectREFR* a_this, RE::BGSLoadFormBuffer* a_buf)
-		{
-			func(a_this, a_buf);
-
-			Manager::GetSingleton()->FinishLoadSerializedObject(a_this);
-		}
-		static inline REL::Relocation<decltype(thunk)> func;
-		static constexpr std::size_t                   idx{ 0x11 };
-
-		static void Install()
-		{
-			stl::write_vfunc<RE::TESObjectREFR, TESObjectREFR__FinishLoadGame>();
-		}
-	};
-
-	struct TESObjectREFR__InitHavok
-	{
-		static void thunk(RE::TESObjectREFR* a_this)
-		{
-			func(a_this);
-
-			if (auto root = a_this->Get3D()) {
-				Manager::GetSingleton()->UpdateSerializedObjectHavok(a_this);
-			}
-		}
-		static inline REL::Relocation<decltype(thunk)> func;
-		static constexpr std::size_t                   idx{ 0x66 };
-
-		static void Install()
-		{
-			stl::write_vfunc<RE::TESObjectREFR, TESObjectREFR__InitHavok>();
-		}
-	};
-
-	struct TESObjectREFR__MarkedAsPickedUp
+	/*struct TESObjectREFR__MarkedAsPickedUp
 	{
 		static void thunk(RE::TESObjectREFR* a_this)
 		{
@@ -75,7 +22,7 @@ namespace Hooks
 	};
 
 	// because TESObjectLoadedEvent only fires for forms with FormRetainsID flag
-	/*struct TESObjectREFR__Set3DSimple
+	struct TESObjectREFR__Set3DSimple
 	{
 		static void thunk(RE::TESObjectREFR* a_this, RE::NiAVObject* a_root)
 		{
@@ -92,9 +39,18 @@ namespace Hooks
 
 	void Install()
 	{
-		TESObjectREFR__LoadGame::Install();
-		TESObjectREFR__FinishLoadGame::Install();
-		TESObjectREFR__InitHavok::Install();
+		CheckSaveGame<RE::TESObjectREFR>::Install();
+		CheckSaveGame<RE::Hazard>::Install();
+		CheckSaveGame<RE::ArrowProjectile>::Install();
+		
+		FinishLoadGame<RE::TESObjectREFR>::Install();
+		FinishLoadGame<RE::Hazard>::Install();
+		FinishLoadGame<RE::ArrowProjectile>::Install();
+
+		InitHavok<RE::TESObjectREFR>::Install();
+		InitHavok<RE::Hazard>::Install();
+		InitHavok<RE::ArrowProjectile>::Install();
+
 		//TESObjectREFR__Set3DSimple::Install();
 		//TESObjectREFR__MarkedAsPickedUp::Install();
 	}

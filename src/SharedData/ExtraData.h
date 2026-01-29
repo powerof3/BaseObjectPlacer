@@ -73,6 +73,24 @@ namespace Extra
 
 		bool empty() const { return parents.empty(); }
 
+		void AddExtraData(RE::TESObjectREFR* a_ref) const
+			requires std::is_same_v<RE::FormID, T>
+		{
+			for (auto& [refID, delay] : parents) {
+				if (auto parentRef = RE::TESForm::LookupByID<RE::TESObjectREFR>(refID)) {
+					a_ref->extraList.SetActivateParent(parentRef, delay);
+					parentRef->extraList.AddActivateRefChild(a_ref);
+					parentRef->AddChange(RE::TESObjectREFR::ChangeFlags::kActivatingChildren);
+				}
+			}
+			if (parentActivateOnly) {
+				if (auto xData = a_ref->extraList.GetByType<RE::ExtraActivateRef>()) {
+					xData->activateFlags |= 1 << 0;
+				}
+			}
+		}
+
+		// members
 		std::vector<ActivateParent<T>> parents;
 		bool                           parentActivateOnly{ false };
 
@@ -97,6 +115,32 @@ namespace Extra
 			popIn(other.popIn)
 		{}
 
+		void AddExtraData(RE::TESObjectREFR* a_ref) const
+			requires std::is_same_v<RE::FormID, T>
+		{
+			if (reference != 0) {
+				if (auto parentRef = RE::TESForm::LookupByID<RE::TESObjectREFR>(reference)) {
+					auto xDataParent = RE::BSExtraData::Create<RE::ExtraEnableStateParent>();
+					xDataParent->parent = parentRef->CreateRefHandle();
+					if (oppositeState) {
+						xDataParent->flags |= 1 << 1;
+					}
+					if (popIn) {
+						xDataParent->flags |= 1 << 2;
+					}
+					a_ref->extraList.Add(xDataParent);
+					auto xDataChildren = parentRef->extraList.GetByType<RE::ExtraEnableStateChildren>();
+					if (!xDataChildren) {
+						xDataChildren = RE::BSExtraData::Create<RE::ExtraEnableStateChildren>();
+						parentRef->extraList.Add(xDataChildren);
+					}
+					if (xDataChildren) {
+						xDataChildren->children.emplace_front(a_ref->CreateRefHandle());
+					}
+				}
+			}
+		}
+
 		T    reference{};
 		bool oppositeState{ false };
 		bool popIn{ false };
@@ -120,6 +164,24 @@ namespace Extra
 			keyword(RE::GetFormID(other.keyword))
 		{}
 
+		void AddExtraData(RE::TESObjectREFR* a_ref) const
+			requires std::is_same_v<RE::FormID, T>
+		{
+			if (auto parentRef = RE::TESForm::LookupByID<RE::TESObjectREFR>(reference)) {
+				const auto keywordForm = RE::TESForm::LookupByID<RE::BGSKeyword>(keyword);
+				a_ref->extraList.SetLinkedRef(parentRef, keywordForm);
+
+				auto xDataChildren = parentRef->extraList.GetByType<RE::ExtraLinkedRefChildren>();
+				if (!xDataChildren) {
+					xDataChildren = RE::BSExtraData::Create<RE::ExtraLinkedRefChildren>();
+					parentRef->extraList.Add(xDataChildren);
+				}
+
+				xDataChildren->linkedChildren.push_back(RE::ExtraLinkedRefChildren::LinkedRefChild{ keywordForm, a_ref->CreateRefHandle() });
+			}
+		}
+
+		// members
 		T reference{};
 		T keyword{};
 
@@ -142,6 +204,22 @@ namespace Extra
 			key(RE::GetFormID(other.key))
 		{}
 
+		void AddExtraData(RE::TESObjectREFR* a_ref) const
+			requires std::is_same_v<RE::FormID, T>
+		{
+			if (lockLevel != RE::LOCK_LEVEL::kUnlocked || key != 0) {
+				if (auto lockData = a_ref->AddLock()) {
+					lockData->baseLevel = static_cast<std::int8_t>(lockLevel);
+					if (key != 0) {
+						lockData->key = RE::TESForm::LookupByID<RE::TESKey>(key);
+					}
+					lockData->SetLocked(true);
+					a_ref->AddChange(RE::TESObjectREFR::ChangeFlags::kLockExtra);
+				}
+			}
+		}
+
+		// members
 		RE::LOCK_LEVEL lockLevel{ RE::LOCK_LEVEL::kUnlocked };
 		T              key{};
 
@@ -167,6 +245,27 @@ namespace Extra
 			rotation(other.rotation)
 		{}
 
+		void AddExtraData(RE::TESObjectREFR* a_ref) const
+			requires std::is_same_v<RE::FormID, T>
+		{
+			if (linkedDoor != 0) {
+				if (auto teleportRef = RE::TESForm::LookupByID<RE::TESObjectREFR>(linkedDoor); teleportRef && teleportRef->GetBaseObject() && teleportRef->GetBaseObject()->Is(RE::FormType::Door)) {
+					RE::TESObjectDOOR::LinkRandomTeleportDoors(a_ref, teleportRef);
+					if (auto xData = a_ref->extraList.GetByType<RE::ExtraTeleport>()) {
+						if (xData->teleportData) {
+							if (position != RE::NiPoint3::Zero()) {
+								xData->teleportData->position = position;
+							}
+							if (rotation != RE::NiPoint3::Zero()) {
+								xData->teleportData->rotation = rotation;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// members
 		T            linkedDoor{};
 		RE::NiPoint3 position{};
 		RE::NiPoint3 rotation{};
@@ -176,8 +275,9 @@ namespace Extra
 	};
 
 	template <class T>
-	struct ExtraData
+	class ExtraData
 	{
+	public:
 		ExtraData<T>() = default;
 		ExtraData<T>(const ExtraData<T>& other) :
 			teleport(other.teleport),
@@ -189,9 +289,7 @@ namespace Extra
 			ownership(other.ownership),
 			displayName(other.displayName),
 			count(other.count),
-			charge(other.charge),
-			soul(other.soul)
-
+			charge(other.charge)
 		{}
 		ExtraData<T>(const ExtraData<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
@@ -204,8 +302,7 @@ namespace Extra
 			ownership(RE::GetFormID(other.ownership)),
 			displayName(other.displayName),
 			count(other.count),
-			charge(other.charge),
-			soul(other.soul)
+			charge(other.charge)
 		{
 			linkedRefs.reserve(other.linkedRefs.size());
 			for (const auto& linkedRef : other.linkedRefs) {
@@ -219,57 +316,14 @@ namespace Extra
 			if (encounterZone != 0) {
 				if (auto encounterZoneForm = RE::TESForm::LookupByID<RE::BGSEncounterZone>(encounterZone)) {
 					a_ref->extraList.SetEncounterZone(encounterZoneForm);
+					a_ref->AddChange(RE::TESObjectREFR::ChangeFlags::kEncZoneExtra);
 				}
 			}
 
 			if (ownership != 0) {
 				if (auto owner = RE::TESForm::LookupByID(ownership)) {
-					auto xData = RE::BSExtraData::Create<RE::ExtraOwnership>();
-					xData->owner = owner;
-					a_ref->extraList.Add(xData);
+					a_ref->SetOwner(owner);
 				}
-			}
-
-			if (enableStateParent.reference != 0) {
-				if (auto parentRef = RE::TESForm::LookupByID<RE::TESObjectREFR>(enableStateParent.reference)) {
-					auto xDataParent = RE::BSExtraData::Create<RE::ExtraEnableStateParent>();
-					xDataParent->parent = parentRef->CreateRefHandle();
-					if (enableStateParent.oppositeState) {
-						xDataParent->flags |= 1 << 1;
-					}
-					if (enableStateParent.popIn) {
-						xDataParent->flags |= 1 << 2;
-					}
-					a_ref->extraList.Add(xDataParent);
-					auto xDataChildren = parentRef->extraList.GetByType<RE::ExtraEnableStateChildren>();
-					if (!xDataChildren) {
-						xDataChildren = RE::BSExtraData::Create<RE::ExtraEnableStateChildren>();
-						parentRef->extraList.Add(xDataChildren);
-					}
-					if (xDataChildren) {
-						xDataChildren->children.emplace_front(a_ref->CreateRefHandle());
-					}
-				}
-			}
-
-			if (teleport.linkedDoor != 0) {
-				if (auto teleportRef = RE::TESForm::LookupByID<RE::TESObjectREFR>(teleport.linkedDoor); teleportRef && teleportRef->GetBaseObject() && teleportRef->GetBaseObject()->Is(RE::FormType::Door)) {
-					RE::TESObjectDOOR::LinkRandomTeleportDoors(a_ref, teleportRef);
-				}
-			}
-
-			if (lock.lockLevel != RE::LOCK_LEVEL::kUnlocked || lock.key != 0) {
-				if (auto lockData = a_ref->AddLock()) {
-					lockData->baseLevel = static_cast<std::int8_t>(lock.lockLevel);
-					if (lock.key != 0) {
-						lockData->key = RE::TESForm::LookupByID<RE::TESKey>(lock.key);
-					}
-					lockData->SetLocked(true);
-				}
-			}
-
-			if (soul != RE::SOUL_LEVEL::kNone) {
-				a_ref->extraList.Add(new RE::ExtraSoul(soul));
 			}
 
 			if (!displayName.empty()) {
@@ -278,43 +332,23 @@ namespace Extra
 
 			if (auto countVal = count.value(a_hash); countVal > 1) {
 				a_ref->extraList.SetCount(static_cast<std::uint16_t>(countVal));
+				//a_ref->AddChange(RE::TESObjectREFR::ChangeFlags::kItemExtraData); // persists even without change flag
 			}
 
+			// ??
 			if (charge > 0.0f) {
 				auto xData = new RE::ExtraCharge();
 				xData->charge = charge;
 				a_ref->extraList.Add(xData);
 			}
 
-			if (!activateParents.empty()) {
-				for (auto& [refID, delay] : activateParents.parents) {
-					if (auto parentRef = RE::TESForm::LookupByID<RE::TESObjectREFR>(refID)) {
-						a_ref->extraList.SetActivateParent(parentRef, delay);
-						parentRef->extraList.AddActivateRefChild(a_ref);
-					}
-				}
-				if (activateParents.parentActivateOnly) {
-					if (auto xData = a_ref->extraList.GetByType<RE::ExtraActivateRef>()) {
-						xData->activateFlags |= 1 << 0;
-					}
-				}
-			}
+			activateParents.AddExtraData(a_ref);
+			enableStateParent.AddExtraData(a_ref);
+			teleport.AddExtraData(a_ref);
+			lock.AddExtraData(a_ref);
 
-			if (!linkedRefs.empty()) {
-				for (auto& [refID, keywordID] : linkedRefs) {
-					if (auto parentRef = RE::TESForm::LookupByID<RE::TESObjectREFR>(refID)) {
-						const auto keyword = RE::TESForm::LookupByID<RE::BGSKeyword>(keywordID);
-						a_ref->extraList.SetLinkedRef(parentRef, keyword);
-
-						auto xDataChildren = parentRef->extraList.GetByType<RE::ExtraLinkedRefChildren>();
-						if (!xDataChildren) {
-							xDataChildren = RE::BSExtraData::Create<RE::ExtraLinkedRefChildren>();
-							parentRef->extraList.Add(xDataChildren);
-						}
-
-						xDataChildren->linkedChildren.push_back(RE::ExtraLinkedRefChildren::LinkedRefChild{ keyword, a_ref->CreateRefHandle() });
-					}
-				}
+			for (const auto& linkedRef : linkedRefs) {
+				linkedRef.AddExtraData(a_ref);
 			}
 		}
 
@@ -329,7 +363,6 @@ namespace Extra
 		std::string               displayName{};
 		RE::Range<std::uint32_t>  count{};
 		float                     charge{};
-		RE::SOUL_LEVEL            soul{ RE::SOUL_LEVEL::kNone };
 
 	private:
 		GENERATE_HASH(ExtraData<T>,
@@ -342,8 +375,7 @@ namespace Extra
 			a_val.ownership,
 			a_val.displayName,
 			a_val.count,
-			a_val.charge,
-			a_val.soul)
+			a_val.charge)
 	};
 }
 
@@ -419,6 +451,5 @@ struct glz::meta<ConfigExtraData>
 		"lock", &T::lock,
 		"displayName", &T::displayName,
 		"count", &T::count,
-		"charge", &T::charge,
-		"soul", &T::soul);
+		"charge", &T::charge);
 };

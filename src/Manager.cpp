@@ -1,32 +1,15 @@
 #include "Manager.h"
 
-void CreatedObjects::erase(RE::FormID a_formID)
-{
-	erase_if(map, [&](const auto& item) {
-		return item.second.GetNumericID() == a_formID;
-	});
-}
-
-std::optional<RE::BGSNumericIDIndex> CreatedObjects::find(std::size_t a_hash)
-{
-	auto it = map.find(a_hash);
-	return it != map.end() ? std::optional(it->second) : std::nullopt;
-}
-
 std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 {
 	logger::info("{:*^50}", a_reload ? "RELOAD" : "CONFIG FILES");
 
-	std::filesystem::path dir{ R"(Data\BaseObjectPlacer)" };
+	static std::filesystem::path dir{ R"(Data\BaseObjectPlacer)" };
 
 	std::error_code ec;
 	if (!std::filesystem::exists(dir, ec)) {
 		logger::info("Data\\BaseObjectPlacer folder not found ({})", ec.message());
 		return { false, true };
-	}
-
-	if (a_reload) {
-		configs.clear();
 	}
 
 	std::vector<std::filesystem::path> paths;
@@ -73,7 +56,7 @@ void Manager::ReloadConfigs()
 	auto [success, errorFound] = ReadConfigs(true);
 
 	if (errorFound) {
-		RE::ConsoleLog::GetSingleton()->Print("\tError when parsing configs. See po3_BaseObjectPlacer.log for more information.\nReload skipped.", configObjects.size());
+		RE::ConsoleLog::GetSingleton()->Print("\tError when parsing configs. See po3_BaseObjectPlacer.log for more information.\nReload skipped.");
 		return;
 	}
 
@@ -109,10 +92,10 @@ void Manager::OnDataLoad()
 		detail::add_event_sink<RE::TESCellFullyLoadedEvent>();
 		logger::info("Registered for cell load event");
 	}
-	if (!game.objects.empty()) {
-		detail::add_event_sink<RE::TESCellAttachDetachEvent>();
-		logger::info("Registered for cell attach event");
-	}
+
+	detail::add_event_sink<RE::TESCellAttachDetachEvent>();
+	logger::info("Registered for cell attach event");
+
 	detail::add_event_sink<RE::TESLoadGameEvent>();
 	detail::add_event_sink<RE::TESFormDeleteEvent>();
 
@@ -123,8 +106,9 @@ void Manager::OnDataLoad()
 void Manager::SpawnInCell(RE::TESObjectCELL* a_cell)
 {
 	if (auto it = game.cells.find(a_cell->GetFormEditorID()); it != game.cells.end()) {
-		for (const auto& srcData : it->second) {
-			srcData.SpawnObject(nullptr, a_cell, a_cell->worldSpace);
+		const auto dataHandler = RE::TESDataHandler::GetSingleton();
+		for (const auto& object : it->second) {
+			object.SpawnObject(dataHandler, nullptr, a_cell, a_cell->worldSpace);
 		}
 	}
 }
@@ -132,65 +116,85 @@ void Manager::SpawnInCell(RE::TESObjectCELL* a_cell)
 void Manager::SpawnAtReference(RE::TESObjectREFR* a_ref)
 {
 	if (auto it = game.objects.find(a_ref->GetFormID()); it != game.objects.end()) {
-		for (const auto& srcData : it->second) {
-			srcData.SpawnObject(a_ref, a_ref->GetParentCell(), a_ref->GetWorldspace());
+		const auto dataHandler = RE::TESDataHandler::GetSingleton();
+		const auto cell = a_ref->GetParentCell();
+		const auto worldSpace = a_ref->GetWorldspace();
+		for (const auto& object : it->second) {
+			object.SpawnObject(dataHandler, a_ref, cell, worldSpace);
 		}
 	}
 }
 
 void Manager::ProcessConfigs()
 {
-	for (auto& [attachForm, sourceDataVec] : configs.objects) {
+	for (auto& [attachForm, objectVec] : configs.objects) {
 		const auto attachFormID = RE::GetFormID(attachForm);
 		if (attachFormID == 0) {
 			continue;
 		}
-		std::vector<Game::SourceData> vec;
-		for (auto& sourceData : sourceDataVec) {
-			sourceData.GenerateHash();
-			sourceData.CreateGameSourceData(vec, attachFormID, attachForm);
+		std::vector<Game::Object> vec;
+		for (auto& object : objectVec) {
+			object.GenerateHash();
+			object.CreateGameObject(vec, attachFormID);
 		}
 		if (!vec.empty()) {
-			game.objects[attachFormID].append_range(vec);
+			auto& to = game.objects[attachFormID];
+			to.insert(to.end(), std::make_move_iterator(vec.begin()),
+				std::make_move_iterator(vec.end()));
 		}
 	}
 
-	for (auto& [attachForm, sourceDataVec] : configs.cells) {
-		const auto                    attachEDID = RE::GetEditorID(attachForm);
-		std::vector<Game::SourceData> vec;
-		for (auto& sourceData : sourceDataVec) {
-			sourceData.GenerateHash();
-			sourceData.CreateGameSourceData(vec, 0, attachEDID);
+	for (auto& [attachForm, objectVec] : configs.cells) {
+		const auto                attachEDID = RE::GetEditorID(attachForm);
+		std::vector<Game::Object> vec;
+		for (auto& object : objectVec) {
+			object.GenerateHash();
+			object.CreateGameObject(vec, attachEDID);
 		}
 		if (!vec.empty()) {
-			game.cells[attachEDID].append_range(vec);
+			auto& to = game.cells[attachEDID];
+			to.insert(to.end(), std::make_move_iterator(vec.begin()),
+				std::make_move_iterator(vec.end()));
 		}
 	}
+
+	configs.clear();
 }
 
 void Manager::ProcessConfigObjects()
 {
-	for (const auto& [id, srcDataVec] : game.cells) {
-		for (const auto& srcData : srcDataVec) {
-			configObjects.emplace(srcData.hash, &srcData);
+	for (const auto& [id, objectVec] : game.cells) {
+		for (const auto& object : objectVec) {
+			for (auto& instance : object.instances) {
+				configObjects.emplace(instance.hash, &object);
+			}
 		}
 	}
 
-	for (const auto& [id, srcDataVec] : game.objects) {
-		for (const auto& srcData : srcDataVec) {
-			configObjects.emplace(srcData.hash, &srcData);
+	for (const auto& [id, objectVec] : game.objects) {
+		for (const auto& object : objectVec) {
+			for (auto& instance : object.instances) {
+				configObjects.emplace(instance.hash, &object);
+			}
 		}
 	}
 }
 
 void Manager::PlaceInLoadedArea()
 {
-	RE::TES::GetSingleton()->ForEachCell([this](auto* cell) {
-		SpawnInCell(cell);
-		cell->ForEachReference([this](auto* ref) {
-			SpawnAtReference(ref);
-			return RE::BSContainer::ForEachResult::kContinue;
-		});
+	bool placeAtReferences = !game.objects.empty();
+	bool placeInCells = !game.cells.empty();
+
+	RE::TES::GetSingleton()->ForEachCell([this, placeAtReferences, placeInCells](auto* cell) {
+		if (placeAtReferences) {
+			cell->ForEachReference([this](auto* ref) {
+				SpawnAtReference(ref);
+				return RE::BSContainer::ForEachResult::kContinue;
+			});
+		}
+		if (placeInCells) {
+			SpawnInCell(cell);
+		}
 	});
 }
 
@@ -251,14 +255,17 @@ void Manager::LoadFiles(std::string_view a_save)
 {
 	loadingSave = true;
 
+	logger::info("Loading save {}", a_save);
+	
+	logger::info("\tDeleting {} temp objects", tempObjects.size());
+	tempObjects.clear(true);
+
 	const auto& jsonPath = GetFile(a_save);
 	if (!jsonPath) {
 		return;
 	}
 
-	ClearSavedObjects();
-
-	logger::info("Loading save {}", a_save);
+	savedObjects.clear();
 
 	std::error_code err;
 	if (std::filesystem::exists(*jsonPath, err)) {
@@ -271,19 +278,14 @@ void Manager::LoadFiles(std::string_view a_save)
 
 	logger::info("\t{} saved objects", savedObjects.size());
 
-	// delete hashes not present i
+	// delete hashes not present
 	if (!savedObjects.empty()) {
 		erase_if(savedObjects.map,
 			[this](const auto& entry) {
-				if (!configObjects.contains(entry.first)) {
-					return true;
-				}
-				return false;
+				return !configObjects.contains(entry.first);
 			});
+		savedObjects.rebuild_inverse_map();
 	}
-
-	createdObjects.map.reserve(savedObjects.map.size());
-	createdObjects.map.insert(savedObjects.map.begin(), savedObjects.map.end());
 }
 
 void Manager::DeleteSavedFiles(std::string_view a_save)
@@ -332,22 +334,9 @@ void Manager::CleanupSavedFiles()
 	logger::info("Cleaned up {} orphaned saved files.", count);
 }
 
-void Manager::ClearSavedObjects(bool a_deleteObjects)
+bool Manager::IsTempObject(RE::TESObjectREFR* a_ref)
 {
-	if (a_deleteObjects) {
-		for (auto& [hash, id] : createdObjects.map) {
-			if (auto ref = RE::TESForm::LookupByID<RE::TESObjectREFR>(id.GetNumericID())) {
-				if (auto xData = ref->extraList.GetByType<RE::ExtraCachedScale>()) {  // make sure we're actually deleting a placed object and not a game ref with an overriden formid
-					if (DeserializeHash(xData) == hash) {
-						RE::GarbageCollector::GetSingleton()->Add(ref, true);
-					}
-				}
-			}
-		}
-	}
-
-	createdObjects.clear();
-	savedObjects.clear();
+	return GetSerializedObjectHash(a_ref) != 0 && tempObjects.find(a_ref->GetFormID()) != 0;
 }
 
 void Manager::SerializeHash(std::size_t hash, RE::ExtraCachedScale* a_scaleExtra)
@@ -360,15 +349,34 @@ std::size_t Manager::DeserializeHash(RE::ExtraCachedScale* a_scaleExtra)
 	return RE::RecombineValue(a_scaleExtra->scale3D, a_scaleExtra->refScale);
 }
 
-std::size_t Manager::GetSerializedObject(RE::TESObjectREFR* a_ref)
+void Manager::ClearSavedObjects(bool a_deleteObjects)
 {
-	if (a_ref->IsDynamicForm()) {
+	savedObjects.clear(a_deleteObjects);
+	tempObjects.clear(a_deleteObjects);
+}
+
+void Manager::ClearTempObject(RE::TESObjectREFR* a_ref)
+{
+	if (tempObjects.erase(a_ref->GetFormID())) {
+		RE::GarbageCollector::GetSingleton()->Add(a_ref, true);
+	}
+}
+
+RE::ExtraCachedScale* Manager::GetSerializedObjectData(RE::TESObjectREFR* a_ref)
+{
+	if (a_ref && a_ref->IsDynamicForm()) {
 		if (auto xData = a_ref->extraList.GetByType<RE::ExtraCachedScale>()) {  // actor specific xData
-			return DeserializeHash(xData);
+			return xData;
 		}
 	}
 
-	return 0;
+	return nullptr;
+}
+
+std::size_t Manager::GetSerializedObjectHash(RE::TESObjectREFR* a_ref)
+{
+	auto data = GetSerializedObjectData(a_ref);
+	return data ? DeserializeHash(data) : 0;
 }
 
 void Manager::SerializeObject(std::size_t hash, const RE::TESObjectREFRPtr& a_ref, bool a_temporary)
@@ -378,29 +386,17 @@ void Manager::SerializeObject(std::size_t hash, const RE::TESObjectREFRPtr& a_re
 	a_ref->extraList.Add(xData);
 	a_ref->AddChange(RE::TESObjectREFR::ChangeFlags::kGameOnlyExtra);
 
-	RE::BGSNumericIDIndex numericID{};
-	numericID.SetNumericID(a_ref->GetFormID());
-
 	if (a_temporary) {
-		a_ref->SetTemporary();
+		tempObjects.emplace(hash, a_ref->GetFormID());
 	} else {
-		savedObjects.map.emplace(hash, numericID);
+		savedObjects.emplace(hash, a_ref->GetFormID());
 	}
-	createdObjects.map.emplace(hash, numericID);
-}
-
-void Manager::LoadSerializedObject(RE::TESObjectREFR* a_ref)
-{
-	VisitSerializedObject(a_ref, [a_ref](const auto* sourceData) {
-		sourceData->SetProperties(a_ref);
-	});
 }
 
 void Manager::FinishLoadSerializedObject(RE::TESObjectREFR* a_ref)
 {
-	if (auto hash = GetSerializedObject(a_ref); hash != 0) {
-		RE::BGSNumericIDIndex curID{};
-		curID.SetNumericID(a_ref->GetFormID());
+	if (auto hash = GetSerializedObjectHash(a_ref); hash != 0) {
+		RE::FormID curID = a_ref->GetFormID();
 
 		auto savedID = Manager::GetSingleton()->GetSavedObject(hash);
 
@@ -408,17 +404,17 @@ void Manager::FinishLoadSerializedObject(RE::TESObjectREFR* a_ref)
 		if (!savedID) {
 			logger::error("\t\tObject with hash {} did not have a corresponding config entry. Deleting saved object. [FormID: {:X}]", hash, a_ref->GetFormID());
 			shouldDeleteRef = true;
-		} else if (std::tie(savedID->data1, savedID->data2, savedID->data3) != std::tie(curID.data1, curID.data2, curID.data3)) {
-			logger::error("\t\tObject {:X} - saved ID and current ID mismatch. Deleting saved object. [Expected: ({}, {}, {}), Found: ({}, {}, {})]",
-				a_ref->GetFormID(), curID.data1, curID.data2, curID.data3, savedID->data1, savedID->data2, savedID->data3);
+		} else if (savedID != curID) {
+			logger::error("\t\tObject {:X} - saved ID and current ID mismatch. Deleting saved object. [Expected: ({}), Found: ({})]",
+				a_ref->GetFormID(), curID, savedID);
 			shouldDeleteRef = true;
 		}
 
 		if (shouldDeleteRef) {
 			RE::GarbageCollector::GetSingleton()->Add(a_ref, true);
 		} else {
-			if (auto sourceData = GetConfigObject(hash)) {
-				sourceData->data->SetPropertiesHavok(a_ref, a_ref->Get3D());
+			if (auto object = GetConfigObject(hash)) {
+				object->data.SetPropertiesHavok(a_ref, a_ref->Get3D());
 			}
 		}
 	}
@@ -426,17 +422,17 @@ void Manager::FinishLoadSerializedObject(RE::TESObjectREFR* a_ref)
 
 void Manager::UpdateSerializedObjectHavok(RE::TESObjectREFR* a_ref)
 {
-	VisitSerializedObject(a_ref, [a_ref](const auto* sourceData) {
-		sourceData->data->SetPropertiesHavok(a_ref, a_ref->Get3D());
+	VisitSerializedObject(a_ref, [a_ref](const auto* object, const auto) {
+		object->data.SetPropertiesHavok(a_ref, a_ref->Get3D());
 	});
 }
 
-std::optional<RE::BGSNumericIDIndex> Manager::GetSavedObject(std::size_t a_hash)
+RE::FormID Manager::GetSavedObject(std::size_t a_hash)
 {
-	return savedObjects.find(a_hash);
+	return savedObjects.find(a_hash) || tempObjects.find(a_hash);
 }
 
-const Game::SourceData* Manager::GetConfigObject(std::size_t a_hash)
+const Game::Object* Manager::GetConfigObject(std::size_t a_hash)
 {
 	auto it = configObjects.find(a_hash);
 	return it != configObjects.end() ? it->second : nullptr;
@@ -455,7 +451,7 @@ RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESCellFullyLoadedEvent
 
 RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESCellAttachDetachEvent* a_event, RE::BSTEventSource<RE::TESCellAttachDetachEvent>*)
 {
-	if (!a_event || !a_event->attached || loadingSave) {
+	if (!a_event || loadingSave) {
 		return RE::BSEventNotifyControl::kContinue;
 	}
 
@@ -464,7 +460,11 @@ RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESCellAttachDetachEven
 		return RE::BSEventNotifyControl::kContinue;
 	}
 
-	SpawnAtReference(ref.get());
+	if (a_event->attached && !ref->IsDynamicForm()) {
+		SpawnAtReference(ref.get());
+	} else if (!a_event->attached && ref->IsDynamicForm()) {
+		ClearTempObject(ref.get());
+	}
 
 	return RE::BSEventNotifyControl::kContinue;
 }
@@ -474,6 +474,8 @@ RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESLoadGameEvent* a_eve
 	if (!a_event || !loadingSave) {
 		return RE::BSEventNotifyControl::kContinue;
 	}
+
+	logger::info("Finished loading save game");
 
 	PlaceInLoadedArea();
 
@@ -485,8 +487,8 @@ RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESLoadGameEvent* a_eve
 RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESFormDeleteEvent* a_event, RE::BSTEventSource<RE::TESFormDeleteEvent>*)
 {
 	if (a_event && a_event->formID != 0) {
-		createdObjects.erase(a_event->formID);
 		savedObjects.erase(a_event->formID);
+		tempObjects.erase(a_event->formID);
 	}
 
 	return RE::BSEventNotifyControl::kContinue;

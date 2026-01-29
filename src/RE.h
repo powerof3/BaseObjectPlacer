@@ -2,6 +2,23 @@
 
 namespace RE
 {
+	// BGSNumericIndex
+	inline bool operator<(const BGSNumericIDIndex& lhs, const BGSNumericIDIndex& rhs)
+	{
+		return std::tie(lhs.data1, lhs.data2, lhs.data3) < std::tie(rhs.data1, rhs.data2, rhs.data3);
+	}
+
+	inline bool operator==(const BGSNumericIDIndex& lhs, const BGSNumericIDIndex& rhs)
+	{
+		return std::tie(lhs.data1, lhs.data2, lhs.data3) == std::tie(rhs.data1, rhs.data2, rhs.data3);
+	}
+	
+	inline std::size_t hash_value(const BGSNumericIDIndex& a_val) noexcept
+	{
+		return hash::combine(a_val.data1, a_val.data2, a_val.data3);
+	}
+
+	// NiPoint3
 	inline std::size_t hash_value(const NiPoint3& a_val) noexcept
 	{
 		return hash::combine(a_val.x, a_val.y, a_val.z);
@@ -21,6 +38,7 @@ namespace RE
 	FormID       GetFormID(const std::string& a_str);
 	std::string  GetEditorID(const std::string& a_str);
 
+	// game function returns true for dynamic refs
 	bool CanBeMoved(const TESObjectREFRPtr& a_refr);
 
 	std::uint32_t GetNumReferenceHandles();
