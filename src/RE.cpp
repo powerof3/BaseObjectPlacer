@@ -22,9 +22,30 @@ namespace RE
 		return form;
 	}
 
+	FormID GetUncheckedFormID(const std::string& a_str)
+	{
+		if (const auto splitID = string::split(a_str, "~"); splitID.size() == 2) {
+			const auto  formID = string::to_num<FormID>(splitID[0], true);
+			const auto& modName = splitID[1];
+			if (g_mergeMapperInterface) {
+				const auto [mergedModName, mergedFormID] = g_mergeMapperInterface->GetNewFormID(modName.c_str(), formID);
+				return TESDataHandler::GetSingleton()->LookupFormID(mergedFormID, mergedModName);
+			} else {
+				return TESDataHandler::GetSingleton()->LookupFormID(formID, modName);
+			}
+		} else if (string::is_only_hex(a_str, true)) {
+			return string::to_num<FormID>(a_str, true);
+		} else {
+			if (const auto form = TESForm::LookupByEditorID(a_str)) {
+				return form->GetFormID();
+			}
+		}
+		return static_cast<RE::FormID>(0);
+	}
+
 	FormID GetFormID(const std::string& a_str)
 	{
-		auto form = GetForm(a_str);
+		const auto form = GetForm(a_str);
 		return form ? form->GetFormID() : 0;
 	}
 

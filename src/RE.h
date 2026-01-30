@@ -34,9 +34,10 @@ namespace RE
 		}
 	}
 
-	RE::TESForm* GetForm(const std::string& a_str);
-	FormID       GetFormID(const std::string& a_str);
-	std::string  GetEditorID(const std::string& a_str);
+	TESForm*    GetForm(const std::string& a_str);
+	FormID      GetUncheckedFormID(const std::string& a_str);
+	FormID      GetFormID(const std::string& a_str);
+	std::string GetEditorID(const std::string& a_str);
 
 	// game function returns true for dynamic refs
 	bool CanBeMoved(const TESObjectREFRPtr& a_refr);

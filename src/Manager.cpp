@@ -126,7 +126,7 @@ void Manager::SpawnAtReference(RE::TESObjectREFR* a_ref)
 void Manager::ProcessConfigs()
 {
 	for (auto& [attachForm, objectVec] : configs.objects) {
-		const auto attachFormID = RE::GetFormID(attachForm);
+		const auto attachFormID = RE::GetUncheckedFormID(attachForm);
 		if (attachFormID == 0) {
 			continue;
 		}
