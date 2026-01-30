@@ -13,7 +13,7 @@ namespace Game
 	struct SharedData
 	{
 		SharedData() = default;
-		SharedData(const Config::SharedData& a_data);
+		explicit SharedData(const Config::SharedData& a_data);
 
 		bool IsTemporary() const;
 
@@ -93,7 +93,7 @@ namespace Game
 		};
 
 		Object() = default;
-		Object(const Config::SharedData& a_data);
+		explicit Object(const Config::SharedData& a_data);
 
 		void SetProperties(RE::TESObjectREFR* a_ref, std::size_t hash) const;
 		void SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace) const;

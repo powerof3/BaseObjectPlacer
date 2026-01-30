@@ -62,7 +62,7 @@ namespace RE
 
 		std::uint32_t activeHandleCount = 0;
 
-		for (auto& val : refrArray) {
+		for (const auto& val : refrArray) {
 			if ((val.handleEntryBits & (1 << 26)) != 0) {
 				activeHandleCount++;
 			}
@@ -124,6 +124,6 @@ namespace RE
 	{
 		using func_t = decltype(&InitScripts);
 		static REL::Relocation<func_t> func{ RELOCATION_ID(19245, 19671) };
-		return func(a_ref);
+		func(a_ref);
 	}
 }

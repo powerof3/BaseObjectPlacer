@@ -5,10 +5,8 @@
 void CreatedObjects::clear(bool a_deleteObjects)
 {
 	if (a_deleteObjects) {
-		auto mgr = Manager::GetSingleton();
-
 		for (auto& [hash, id] : map) {
-			if (auto ref = RE::TESForm::LookupByID<RE::TESObjectREFR>(id); mgr->GetSerializedObjectHash(ref) == hash) {
+			if (auto ref = RE::TESForm::LookupByID<RE::TESObjectREFR>(id); Manager::GetSerializedObjectHash(ref) == hash) {
 				RE::GarbageCollector::GetSingleton()->Add(ref, true);
 			}
 		}

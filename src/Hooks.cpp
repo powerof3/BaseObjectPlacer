@@ -1,7 +1,5 @@
 #include "Hooks.h"
 
-#include "Manager.h"
-
 namespace Hooks
 {
 	/*struct TESObjectREFR__MarkedAsPickedUp

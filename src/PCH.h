@@ -51,7 +51,7 @@ using FlatSet = boost::unordered_flat_set<K, H, KEqual>;
 namespace hash
 {
 	template <typename... Args>
-	inline std::size_t combine(const Args&... args)
+	std::size_t combine(const Args&... args)
 	{
 		std::size_t seed = 0;
 		(boost::hash_combine(seed, args), ...);

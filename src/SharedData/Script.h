@@ -36,7 +36,8 @@ namespace BSScript
 			script(other.script),
 			properties(other.properties)
 		{}
-		Script(const Script<ConfigValue>& a_config)
+
+		explicit Script(const Script<ConfigValue>& a_config)
 			requires std::is_same_v<T, GameValue>
 			:
 			script(a_config.script),

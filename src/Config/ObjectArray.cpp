@@ -59,7 +59,7 @@ namespace Config
 
 	void ObjectArray::Word::GetTransforms(const RE::BSTransform& a_pivot, std::vector<RE::BSTransform>& a_transforms) const
 	{
-		if (word.empty() || size == 0) {
+		if (word.empty() || size == 0.0f) {
 			return;
 		}
 
@@ -81,7 +81,7 @@ namespace Config
 				if (auto it = charMap.find(static_cast<char>(std::toupper(letter))); it != charMap.end()) {
 					for (auto& point : it->second) {
 						RE::BSTransform newTransform = transform;
-						RE::NiPoint3    newPoint = RE::NiPoint3(point * size);
+						RE::NiPoint3    newPoint = { point * size };
 						newPoint *= RE::NiPoint3(-1, 1, 1);
 						newTransform.translate += newPoint;
 						a_transforms.emplace_back(newTransform);
@@ -114,7 +114,7 @@ namespace Config
 		}
 	}
 
-	RE::NiPoint3 ObjectArray::GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count) const
+	RE::NiPoint3 ObjectArray::GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count)
 	{
 		auto rotMin = a_pivotRange.rotate.min();
 		auto rotMax = a_pivotRange.rotate.max();
@@ -130,7 +130,7 @@ namespace Config
 		return RE::NiPoint3(rotX, rotY, rotZ) / static_cast<float>(a_count);
 	}
 
-	std::vector<RE::BSTransform> ObjectArray::GetTransforms(const RE::BSTransformRange& a_pivot) const
+	std::vector<RE::BSTransform> ObjectArray::GetTransforms(const RE::BSTransformRange& a_pivotRange) const
 	{
 		std::vector<RE::BSTransform> arrayTransforms{};
 		RE::BSTransform              pivot{};
@@ -139,7 +139,7 @@ namespace Config
 					   [](std::monostate) {
 					   },
 					   [&](const auto& generator) {
-						   pivot = a_pivot.value(seed);
+						   pivot = a_pivotRange.value(seed);
 						   generator.GetTransforms(pivot, arrayTransforms);
 					   } },
 			array);
@@ -156,8 +156,8 @@ namespace Config
 			bool incrementScale = flags.any(Flags::kIncrementScale);
 
 			auto count = arrayTransforms.size() - 1;
-			auto rotStep = GetRotationStep(a_pivot, count);
-			auto scaleStep = a_pivot.scale.max ? ((a_pivot.scale.max.value() - a_pivot.scale.min) / static_cast<float>(count)) : 0.0f;
+			auto rotStep = GetRotationStep(a_pivotRange, count);
+			auto scaleStep = a_pivotRange.scale.max ? ((a_pivotRange.scale.max.value() - a_pivotRange.scale.min) / static_cast<float>(count)) : 0.0f;
 
 			for (std::size_t idx = 0; idx < arrayTransforms.size(); ++idx) {
 				auto& transform = arrayTransforms[idx];
@@ -165,19 +165,19 @@ namespace Config
 					std::size_t rngSeed = seed;
 					boost::hash_combine(rngSeed, idx);
 					if (randomizeRot) {
-						transform.rotate = a_pivot.rotate.value(rngSeed);
+						transform.rotate = a_pivotRange.rotate.value(rngSeed);
 					}
 					if (randomizeScale) {
-						transform.scale = a_pivot.scale.value(rngSeed);
+						transform.scale = a_pivotRange.scale.value(rngSeed);
 					}
 				} else {
 					if (incrementRot) {
-						auto rot = a_pivot.rotate.min() + (rotStep * static_cast<float>(idx));
+						auto rot = a_pivotRange.rotate.min() + (rotStep * static_cast<float>(idx));
 						RE::WrapAngle(rot);
 						transform.rotate = rot;
 					}
 					if (incrementScale) {
-						transform.scale = a_pivot.scale.min + (scaleStep * static_cast<float>(idx));
+						transform.scale = a_pivotRange.scale.min + (scaleStep * static_cast<float>(idx));
 					}
 				}
 			}

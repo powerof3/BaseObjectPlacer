@@ -101,10 +101,10 @@ void Game::SharedData::AttachScripts(RE::TESObjectREFR* a_ref) const
 							   },
 							   [&](const RE::TESForm* a_val) {
 								   RE::BSTSmartPointer<RE::BSScript::Object> obj;
-								   RE::VMHandle                              handle = handlePolicy->GetHandleForObject(a_val->GetFormType(), a_val);
-								   if (handle && vm->CreateObject(scriptName, obj) && obj) {
+								   RE::VMHandle                              a_handle = handlePolicy->GetHandleForObject(a_val->GetFormType(), a_val);
+								   if (a_handle && vm->CreateObject(scriptName, obj) && obj) {
 									   if (bindPolicy) {
-										   bindPolicy->BindObject(obj, handle);
+										   bindPolicy->BindObject(obj, a_handle);
 										   propInfo->SetObject(obj);
 									   }
 								   }

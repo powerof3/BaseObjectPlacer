@@ -1,7 +1,6 @@
-#include "Config\Object.h"
+#include "Config/Object.h"
 
-#include "Game\Object.h"
-#include "Manager.h"
+#include "Game/Object.h"
 
 namespace Config
 {
@@ -49,7 +48,7 @@ namespace Config
 
 		bool shouldBeOrdered = checkedBaseSize == transformsSize;
 
-		for (auto [transformIdx, transform] : std::views::enumerate(transforms)) {
+		for (const auto [transformIdx, transform] : std::views::enumerate(transforms)) {
 			if (auto arrayTransforms = array.GetTransforms(transform); arrayTransforms.empty()) {
 				std::size_t   objectHash = hash::combine(rootHash, transformIdx);
 				std::uint32_t baseIdx = 0;
@@ -76,7 +75,7 @@ namespace Config
 			} else {
 				shouldBeOrdered = checkedBaseSize == arrayTransforms.size();
 
-				for (auto [arrayIdx, arrayTransform] : std::views::enumerate(arrayTransforms)) {
+				for (const auto [arrayIdx, arrayTransform] : std::views::enumerate(arrayTransforms)) {
 					std::size_t   objectHash = hash::combine(rootHash, transformIdx, arrayIdx);
 					std::uint32_t baseIdx = 0;
 					if (shouldBeOrdered) {

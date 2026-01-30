@@ -53,9 +53,7 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 
 void Manager::ReloadConfigs()
 {
-	auto [success, errorFound] = ReadConfigs(true);
-
-	if (errorFound) {
+	if (auto [success, errorFound] = ReadConfigs(true); errorFound) {
 		RE::ConsoleLog::GetSingleton()->Print("\tError when parsing configs. See po3_BaseObjectPlacer.log for more information.\nReload skipped.");
 		return;
 	}
@@ -334,7 +332,7 @@ void Manager::CleanupSavedFiles()
 	logger::info("Cleaned up {} orphaned saved files.", count);
 }
 
-bool Manager::IsTempObject(RE::TESObjectREFR* a_ref)
+bool Manager::IsTempObject(RE::TESObjectREFR* a_ref) const
 {
 	return GetSerializedObjectHash(a_ref) != 0 && tempObjects.find(a_ref->GetFormID()) != 0;
 }

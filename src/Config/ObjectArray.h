@@ -78,7 +78,7 @@ namespace Config
 			Radial,
 			Word>;
 
-		RE::NiPoint3                 GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count) const;
+		static RE::NiPoint3          GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count);
 		std::vector<RE::BSTransform> GetTransforms(const RE::BSTransformRange& a_pivotRange) const;
 
 		// members
@@ -135,7 +135,8 @@ struct glz::meta<ConfigObjectArray>
 	{
 		if (std::holds_alternative<std::monostate>(s.array)) {
 			return &s.array.emplace<Type>();
-		} else if (std::holds_alternative<Type>(s.array)) {
+		}
+		if (std::holds_alternative<Type>(s.array)) {
 			return std::get_if<Type>(&s.array);
 		}
 		return nullptr;
@@ -171,7 +172,7 @@ struct glz::meta<ConfigObjectArray>
 			}
 		}
 	};
-	static constexpr auto write_flags = [](auto& s) -> auto& { return ""; };
+	static constexpr auto write_flags = [](auto&) -> auto& { return ""; };
 
 	static constexpr auto value = object(
 		"grid", [](T& s) { return access<ConfigObjectArray::Grid>(s); },

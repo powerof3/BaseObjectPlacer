@@ -38,7 +38,8 @@ namespace Extra
 			reference(other.reference),
 			delay(other.delay)
 		{}
-		ActivateParent<T>(const ActivateParent<std::string>& other)
+
+		explicit ActivateParent<T>(const ActivateParent<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			reference(RE::GetFormID(other.reference)),
@@ -60,7 +61,8 @@ namespace Extra
 			parents(other.parents),
 			parentActivateOnly(other.parentActivateOnly)
 		{}
-		ActivateParents<T>(const ActivateParents<std::string>& other)
+
+		explicit ActivateParents<T>(const ActivateParents<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			parentActivateOnly(other.parentActivateOnly)
@@ -107,7 +109,8 @@ namespace Extra
 			oppositeState(other.oppositeState),
 			popIn(other.popIn)
 		{}
-		EnableStateParent<T>(const EnableStateParent<std::string>& other)
+
+		explicit EnableStateParent<T>(const EnableStateParent<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			reference(RE::GetFormID(other.reference)),
@@ -157,7 +160,8 @@ namespace Extra
 			reference(other.reference),
 			keyword(other.keyword)
 		{}
-		LinkedRef<T>(const LinkedRef<std::string>& other)
+
+		explicit LinkedRef<T>(const LinkedRef<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			reference(RE::GetFormID(other.reference)),
@@ -197,7 +201,8 @@ namespace Extra
 			lockLevel(other.lockLevel),
 			key(other.key)
 		{}
-		Lock<T>(const Lock<std::string>& other)
+
+		explicit Lock<T>(const Lock<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			lockLevel(other.lockLevel),
@@ -237,7 +242,7 @@ namespace Extra
 			rotation(other.rotation)
 		{}
 
-		Teleport<T>(const Teleport<std::string>& other)
+		explicit Teleport<T>(const Teleport<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			linkedDoor(RE::GetFormID(other.linkedDoor)),

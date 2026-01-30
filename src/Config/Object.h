@@ -90,7 +90,7 @@ struct glz::meta<ConfigObject>
 			}
 		}
 	};
-	static constexpr auto write_flags = [](auto& s) -> auto& { return ""; };
+	static constexpr auto write_flags = [](auto&) -> auto& { return ""; };
 
 	static constexpr auto read_chance = [](T& s, float input) {
 		s.data.chance = input / 100.0f;
