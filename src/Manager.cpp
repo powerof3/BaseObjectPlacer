@@ -125,20 +125,23 @@ void Manager::SpawnAtReference(RE::TESObjectREFR* a_ref)
 
 void Manager::ProcessConfigs()
 {
-	for (auto& [attachForm, objectVec] : configs.objects) {
-		const auto attachFormID = RE::GetUncheckedFormID(attachForm);
-		if (attachFormID == 0) {
-			continue;
-		}
-		std::vector<Game::Object> vec;
-		for (auto& object : objectVec) {
-			object.GenerateHash();
-			object.CreateGameObject(vec, attachFormID);
-		}
-		if (!vec.empty()) {
-			auto& to = game.objects[attachFormID];
-			to.insert(to.end(), std::make_move_iterator(vec.begin()),
-				std::make_move_iterator(vec.end()));
+	for (auto& [attachForms, objectVec] : configs.objects) {
+		auto splitAttachForms = string::split(attachForms, ",");
+		for (auto& attachForm: splitAttachForms) {
+			const auto attachFormID = RE::GetUncheckedFormID(attachForm);
+			if (attachFormID == 0) {
+				continue;
+			}
+			std::vector<Game::Object> vec;
+			for (auto& object : objectVec) {
+				object.GenerateHash();
+				object.CreateGameObject(vec, attachFormID);
+			}
+			if (!vec.empty()) {
+				auto& to = game.objects[attachFormID];
+				to.insert(to.end(), std::make_move_iterator(vec.begin()),
+					std::make_move_iterator(vec.end()));
+			}			
 		}
 	}
 
