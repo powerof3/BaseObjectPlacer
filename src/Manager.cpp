@@ -395,15 +395,14 @@ void Manager::FinishLoadSerializedObject(RE::TESObjectREFR* a_ref)
 {
 	if (auto hash = GetSerializedObjectHash(a_ref); hash != 0) {
 		RE::FormID curID = a_ref->GetFormID();
-
-		auto savedID = Manager::GetSingleton()->GetSavedObject(hash);
+		auto       savedID = GetSavedObject(hash);
 
 		bool shouldDeleteRef = false;
 		if (!savedID) {
 			logger::error("\t\tObject with hash {} did not have a corresponding config entry. Deleting saved object. [FormID: {:X}]", hash, a_ref->GetFormID());
 			shouldDeleteRef = true;
 		} else if (savedID != curID) {
-			logger::error("\t\tObject {:X} - saved ID and current ID mismatch. Deleting saved object. [Expected: ({}), Found: ({})]",
+			logger::error("\t\tObject {:X} - saved ID and current ID mismatch. Deleting saved object. [Expected: ({:X}), Found: ({:X})]",
 				a_ref->GetFormID(), curID, savedID);
 			shouldDeleteRef = true;
 		}
@@ -425,9 +424,12 @@ void Manager::UpdateSerializedObjectHavok(RE::TESObjectREFR* a_ref)
 	});
 }
 
-RE::FormID Manager::GetSavedObject(std::size_t a_hash)
+RE::FormID Manager::GetSavedObject(std::size_t a_hash) const
 {
-	return savedObjects.find(a_hash) || tempObjects.find(a_hash);
+	if (auto id = savedObjects.find(a_hash); id != 0) {
+		return id;
+	}
+	return tempObjects.find(a_hash);
 }
 
 const Game::Object* Manager::GetConfigObject(std::size_t a_hash)

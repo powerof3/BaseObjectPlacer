@@ -17,7 +17,7 @@ public:
 
 	void OnDataLoad();
 
-	RE::FormID          GetSavedObject(std::size_t a_hash);
+	RE::FormID          GetSavedObject(std::size_t a_hash) const;
 	const Game::Object* GetConfigObject(std::size_t a_hash);
 
 	void LoadFiles(std::string_view a_save);

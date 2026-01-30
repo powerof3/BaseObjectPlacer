@@ -213,6 +213,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 	}
 
 	std::vector<RE::TESBoundObject*> forms;
+	forms.reserve(bases.size());
 	for (auto& baseID : bases) {
 		forms.emplace_back(RE::TESForm::LookupByID<RE::TESBoundObject>(baseID));
 	}
