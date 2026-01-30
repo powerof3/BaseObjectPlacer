@@ -127,7 +127,7 @@ void Manager::ProcessConfigs()
 {
 	for (auto& [attachForms, objectVec] : configs.objects) {
 		auto splitAttachForms = string::split(attachForms, ",");
-		for (auto& attachForm: splitAttachForms) {
+		for (auto& attachForm : splitAttachForms) {
 			const auto attachFormID = RE::GetUncheckedFormID(attachForm);
 			if (attachFormID == 0) {
 				continue;
@@ -141,7 +141,7 @@ void Manager::ProcessConfigs()
 				auto& to = game.objects[attachFormID];
 				to.insert(to.end(), std::make_move_iterator(vec.begin()),
 					std::make_move_iterator(vec.end()));
-			}			
+			}
 		}
 	}
 
