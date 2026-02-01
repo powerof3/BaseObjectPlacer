@@ -184,7 +184,7 @@ void Game::SharedData::AttachScripts(RE::TESObjectREFR* a_ref) const
 RE::BSTransform Game::Object::Instance::GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle) const
 {
 	RE::BSTransform newTransform = transform;
-	newTransform.translate += a_refPos;		
+	newTransform.translate += a_refPos;
 	if (newTransform.relativeRotate) {
 		newTransform.rotate += a_refAngle;
 		RE::WrapAngle(newTransform.rotate);

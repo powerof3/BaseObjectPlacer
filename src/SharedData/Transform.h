@@ -58,7 +58,7 @@ namespace RE
 			kDegToRad,
 			kRadToDeg
 		};
-		
+
 		Point3Range() = default;
 		Point3Range(const Point3Range& a_rhs, Convert type) :
 			x(convert(a_rhs.x, type)),
@@ -90,7 +90,7 @@ namespace RE
 				return range;
 			}
 		}
-		
+
 		GENERATE_HASH(Point3Range, a_val.x, a_val.y, a_val.z, a_val.relative)
 	};
 

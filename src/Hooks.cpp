@@ -38,7 +38,7 @@ namespace Hooks
 	void Install()
 	{
 		logger::info("{:*^50}", "HOOKS");
-		
+
 		CheckSaveGame<RE::TESObjectREFR>::Install();
 		CheckSaveGame<RE::Hazard>::Install();
 		CheckSaveGame<RE::ArrowProjectile>::Install();

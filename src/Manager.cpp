@@ -116,7 +116,7 @@ void Manager::SpawnAtReference(RE::TESObjectREFR* a_ref)
 	if (game.objects.empty()) {
 		return;
 	}
-	
+
 	const auto base = a_ref->GetBaseObject();
 
 	const auto findObject = [&](auto&& key) {
