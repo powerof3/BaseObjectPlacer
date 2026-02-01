@@ -139,7 +139,7 @@ namespace Config
 					   [](std::monostate) {
 					   },
 					   [&](const auto& generator) {
-						   pivot = a_pivotRange.value(seed);
+						   pivot = RE::BSTransform(a_pivotRange, seed);
 						   generator.GetTransforms(pivot, arrayTransforms);
 					   } },
 			array);

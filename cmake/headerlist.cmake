@@ -1,5 +1,4 @@
 set(headers ${headers}
-	src/Config/Format.h
 	src/Config/Object.h
 	src/Config/ObjectArray.h
 	src/Debug.h

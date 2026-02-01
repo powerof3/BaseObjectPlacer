@@ -106,39 +106,74 @@ void Manager::SpawnInCell(RE::TESObjectCELL* a_cell)
 	if (auto it = game.cells.find(a_cell->GetFormEditorID()); it != game.cells.end()) {
 		const auto dataHandler = RE::TESDataHandler::GetSingleton();
 		for (const auto& object : it->second) {
-			object.SpawnObject(dataHandler, nullptr, a_cell, a_cell->worldSpace);
+			object.SpawnObject(dataHandler, nullptr, a_cell, a_cell->worldSpace, false);
 		}
 	}
 }
 
 void Manager::SpawnAtReference(RE::TESObjectREFR* a_ref)
 {
-	if (auto it = game.objects.find(a_ref->GetFormID()); it != game.objects.end()) {
-		const auto dataHandler = RE::TESDataHandler::GetSingleton();
-		const auto cell = a_ref->GetParentCell();
-		const auto worldSpace = a_ref->GetWorldspace();
-		for (const auto& object : it->second) {
-			object.SpawnObject(dataHandler, a_ref, cell, worldSpace);
-		}
+	if (game.objects.empty()) {
+		return;
+	}
+	
+	const auto base = a_ref->GetBaseObject();
+
+	const auto findObject = [&](auto&& key) {
+		return game.objects.find(key);
+	};
+
+	auto it = findObject(a_ref->GetFormID());
+	if (it == game.objects.end() && base) {
+		it = findObject(base->GetFormID());
+	}
+	if (it == game.objects.end()) {
+		it = findObject(clib_util::editorID::get_editorID(a_ref));
+	}
+	if (it == game.objects.end() && base) {
+		it = findObject(clib_util::editorID::get_editorID(base));
+	}
+
+	if (it == game.objects.end()) {
+		return;
+	}
+
+	const auto dataHandler = RE::TESDataHandler::GetSingleton();
+	const auto cell = a_ref->GetParentCell();
+	const auto worldSpace = a_ref->GetWorldspace();
+	for (const auto& object : it->second) {
+		object.SpawnObject(dataHandler, a_ref, cell, worldSpace, true);
 	}
 }
 
 void Manager::ProcessConfigs()
 {
-	for (auto& [attachForms, objectVec] : configs.objects) {
-		auto splitAttachForms = string::split(attachForms, ",");
-		for (auto& attachForm : splitAttachForms) {
-			const auto attachFormID = RE::GetUncheckedFormID(attachForm);
-			if (attachFormID == 0) {
-				continue;
-			}
+	for (auto& [attachFormStrs, objectVec] : configs.objects) {
+		if (objectVec.empty()) {
+			continue;
+		}
+
+		for (auto& object : objectVec) {
+			object.GenerateHash();
+		}
+
+		auto splitAttachFormStrs = string::split(attachFormStrs, ",");
+
+		for (auto& attachFormStr : splitAttachFormStrs) {
+			const auto attachFormID = RE::GetUncheckedFormID(attachFormStr);
+
+			auto& to = (attachFormID != 0) ?
+			               game.objects[attachFormID] :
+			               game.objects[attachFormStr];
+
 			std::vector<Game::Object> vec;
+			vec.reserve(objectVec.size());
+
 			for (auto& object : objectVec) {
-				object.GenerateHash();
 				object.CreateGameObject(vec, attachFormID);
 			}
+
 			if (!vec.empty()) {
-				auto& to = game.objects[attachFormID];
 				to.insert(to.end(), std::make_move_iterator(vec.begin()),
 					std::make_move_iterator(vec.end()));
 			}
@@ -146,12 +181,20 @@ void Manager::ProcessConfigs()
 	}
 
 	for (auto& [attachForm, objectVec] : configs.cells) {
-		const auto                attachEDID = RE::GetEditorID(attachForm);
+		if (objectVec.empty()) {
+			continue;
+		}
+
+		const auto attachEDID = RE::GetEditorID(attachForm);
+
 		std::vector<Game::Object> vec;
+		vec.reserve(objectVec.size());
+
 		for (auto& object : objectVec) {
 			object.GenerateHash();
 			object.CreateGameObject(vec, attachEDID);
 		}
+
 		if (!vec.empty()) {
 			auto& to = game.cells[attachEDID];
 			to.insert(to.end(), std::make_move_iterator(vec.begin()),
@@ -219,11 +262,12 @@ std::optional<std::filesystem::path> Manager::GetSaveDirectory()
 
 std::optional<std::filesystem::path> Manager::GetFile(std::string_view a_save)
 {
-	auto jsonPath = GetSaveDirectory();
-	if (!jsonPath) {
+	const auto saveDir = GetSaveDirectory();
+	if (!saveDir) {
 		return std::nullopt;
 	}
 
+	auto jsonPath = saveDir;
 	*jsonPath /= a_save;
 	jsonPath->replace_extension(".json");
 
@@ -296,7 +340,8 @@ void Manager::DeleteSavedFiles(std::string_view a_save)
 		return;
 	}
 
-	std::filesystem::remove(*jsonPath);
+	std::error_code ec;
+	std::filesystem::remove(*jsonPath, ec);
 }
 
 void Manager::CleanupSavedFiles()
@@ -337,7 +382,10 @@ void Manager::CleanupSavedFiles()
 
 bool Manager::IsTempObject(RE::TESObjectREFR* a_ref) const
 {
-	return GetSerializedObjectHash(a_ref) != 0 && tempObjects.find(a_ref->GetFormID()) != 0;
+	if (GetSerializedObjectHash(a_ref) == 0) {
+		return false;
+	}
+	return tempObjects.find(a_ref->GetFormID()) != 0;
 }
 
 void Manager::SerializeHash(std::size_t hash, RE::ExtraCachedScale* a_scaleExtra)

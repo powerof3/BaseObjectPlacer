@@ -45,6 +45,25 @@ namespace Config
 		SharedData                        data;
 		std::size_t                       baseHash;
 	};
+
+	using ObjectMap = StringMap<std::vector<Object>>;
+
+	struct Format
+	{
+		std::size_t size() const { return cells.size() + objects.size(); }
+		bool        empty() const { return cells.empty() && objects.empty(); }
+
+		void clear()
+		{
+			cells.clear();
+			objects.clear();
+		}
+
+		// members
+		REL::Version version{ 1, 0, 0, 0 };
+		ObjectMap    cells;
+		ObjectMap    objects;
+	};
 }
 
 using ConfigObject = Config::Object;
@@ -110,4 +129,14 @@ struct glz::meta<ConfigObject>
 		"scripts", [](auto&& self) -> auto& { return self.data.scripts; },
 		"conditions", [](auto&& self) -> auto& { return self.data.conditions; },
 		"chance", glz::custom<read_chance, write_chance>);
+};
+
+template <>
+struct glz::meta<Config::Format>
+{
+	using T = Config::Format;
+	static constexpr auto value = object(
+		"version", &T::version,
+		"cells", &T::cells,
+		"objects", &T::objects);
 };

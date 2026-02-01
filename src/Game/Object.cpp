@@ -160,7 +160,7 @@ void Game::SharedData::AttachScripts(RE::TESObjectREFR* a_ref) const
 
 					RE::VMHandle                              propHandle = handlePolicy->GetHandleForObject(form->GetFormType(), form);
 					RE::BSTSmartPointer<RE::BSScript::Object> propObject;
-					if (handle && vm->CreateObject(scriptName, propObject) && propObject) {
+					if (propHandle && vm->CreateObject(scriptName, propObject) && propObject) {
 						if (bindPolicy) {
 							bindPolicy->BindObject(propObject, propHandle);
 							propertyVariable->SetObject(propObject);
@@ -181,20 +181,20 @@ void Game::SharedData::AttachScripts(RE::TESObjectREFR* a_ref) const
 	}
 }
 
-Game::Object::Object(const Config::SharedData& a_data) :
-	data(a_data)
-{}
-
-RE::BSTransform Game::Object::Instance::GetTransform(RE::TESObjectREFR* a_ref) const
+RE::BSTransform Game::Object::Instance::GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle) const
 {
 	RE::BSTransform newTransform = transform;
-	if (a_ref) {
-		newTransform.translate += a_ref->GetPosition();
-		newTransform.rotate += a_ref->GetAngle();
+	newTransform.translate += a_refPos;		
+	if (newTransform.relativeRotate) {
+		newTransform.rotate += a_refAngle;
 		RE::WrapAngle(newTransform.rotate);
 	}
 	return newTransform;
 }
+
+Game::Object::Object(const Config::SharedData& a_data) :
+	data(a_data)
+{}
 
 void Game::Object::SetProperties(RE::TESObjectREFR* a_ref, std::size_t hash) const
 {
@@ -203,7 +203,7 @@ void Game::Object::SetProperties(RE::TESObjectREFR* a_ref, std::size_t hash) con
 	data.extraData.AddExtraData(a_ref, hash);
 }
 
-void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace) const
+void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool) const
 {
 	if (data.conditions) {
 		auto conditionRef = a_ref ? a_ref : RE::PlayerCharacter::GetSingleton();
@@ -211,6 +211,9 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 			return;
 		}
 	}
+
+	const auto refPos = a_ref ? a_ref->GetPosition() : RE::NiPoint3();
+	const auto refAngle = a_ref ? a_ref->GetAngle() : RE::NiPoint3();
 
 	std::vector<RE::TESBoundObject*> forms;
 	forms.reserve(bases.size());
@@ -228,10 +231,11 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 			continue;
 		}
 
-		auto transform = instance.GetTransform(a_ref);
+		auto baseObject = forms[instance.baseIndex];
+		auto transform = instance.GetWorldTransform(refPos, refAngle);
 
 		auto createdRefHandle = a_dataHandler->CreateReferenceAtLocation(
-			forms[instance.baseIndex],
+			baseObject,
 			transform.translate,
 			transform.rotate,
 			a_cell,

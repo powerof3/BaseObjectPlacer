@@ -85,7 +85,19 @@ namespace Game
 	public:
 		struct Instance
 		{
-			RE::BSTransform GetTransform(RE::TESObjectREFR* a_ref) const;
+			Instance() = default;
+			Instance(std::uint32_t a_baseIndex, const RE::BSTransform& a_transform, std::size_t a_hash) :
+				baseIndex(a_baseIndex),
+				transform(a_transform),
+				hash(a_hash)
+			{}
+			Instance(std::uint32_t a_baseIndex, const RE::BSTransformRange& a_range, std::size_t a_hash) :
+				baseIndex(a_baseIndex),
+				transform(a_range, a_hash),
+				hash(a_hash)
+			{}
+
+			RE::BSTransform GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle) const;
 
 			std::uint32_t   baseIndex{ 0 };
 			RE::BSTransform transform;
@@ -96,7 +108,7 @@ namespace Game
 		explicit Object(const Config::SharedData& a_data);
 
 		void SetProperties(RE::TESObjectREFR* a_ref, std::size_t hash) const;
-		void SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace) const;
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool a_doRayCast) const;
 
 		// members
 		SharedData              data;
@@ -104,7 +116,7 @@ namespace Game
 		std::vector<Instance>   instances;
 	};
 
-	using FormIDObjectMap = FlatMap<RE::FormID, std::vector<Game::Object>>;
+	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::Object>>;
 	using EditorIDObjectMap = StringMap<std::vector<Game::Object>>;
 
 	struct Format

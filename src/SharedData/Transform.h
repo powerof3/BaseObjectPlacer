@@ -3,21 +3,43 @@
 namespace RE
 {
 	template <class T>
+		requires std::is_arithmetic_v<T>
 	struct Range
 	{
+		Range() = default;
+
+		explicit Range(T a_min) :
+			min(a_min)
+		{}
+
 		bool operator==(const Range& a_rhs) const { return min == a_rhs.min && max == a_rhs.max; }
 
-		T value(std::size_t seed) const
+		[[nodiscard]] T value(std::size_t seed) const
 		{
 			return (!max || min == *max) ? min :
 			                               clib_util::RNG(seed).generate<T>(min, *max);
 		}
-		void deg_to_rad()
+
+		[[nodiscard]] Range deg_to_rad() const
+			requires std::is_floating_point_v<T>
 		{
-			min = RE::deg_to_rad(min);
+			Range range;
+			range.min = RE::deg_to_rad(min);
 			if (max) {
-				*max = RE::deg_to_rad(*max);
+				range.max = RE::deg_to_rad(*max);
 			}
+			return range;
+		}
+
+		[[nodiscard]] Range rad_to_deg() const
+			requires std::is_floating_point_v<T>
+		{
+			Range range;
+			range.min = RE::rad_to_deg(min);
+			if (max) {
+				range.max = RE::rad_to_deg(*max);
+			}
+			return range;
 		}
 
 		// memebrs
@@ -30,74 +52,143 @@ namespace RE
 
 	struct Point3Range
 	{
-		bool         operator==(const Point3Range& a_rhs) const;
-		RE::NiPoint3 min() const;
-		RE::NiPoint3 max() const;
-		RE::NiPoint3 value(std::size_t seed) const;
-		Point3Range  deg_to_rad() const;
+		enum class Convert
+		{
+			kNone,
+			kDegToRad,
+			kRadToDeg
+		};
+		
+		Point3Range() = default;
+		Point3Range(const Point3Range& a_rhs, Convert type) :
+			x(convert(a_rhs.x, type)),
+			y(convert(a_rhs.y, type)),
+			z(convert(a_rhs.z, type)),
+			relative(a_rhs.relative)
+		{}
+
+		bool                   operator==(const Point3Range& a_rhs) const;
+		[[nodiscard]] NiPoint3 min() const;
+		[[nodiscard]] NiPoint3 max() const;
+		[[nodiscard]] NiPoint3 value(std::size_t seed) const;
 
 		// members
-		Range<float> x{};
-		Range<float> y{};
-		Range<float> z{};
+		Range<float> x;
+		Range<float> y;
+		Range<float> z;
+		bool         relative{ false };
 
 	private:
-		GENERATE_HASH(Point3Range, a_val.x, a_val.y, a_val.z)
+		static Range<float> convert(const Range<float>& range, Convert type)
+		{
+			switch (type) {
+			case Convert::kDegToRad:
+				return range.deg_to_rad();
+			case Convert::kRadToDeg:
+				return range.rad_to_deg();
+			default:
+				return range;
+			}
+		}
+		
+		GENERATE_HASH(Point3Range, a_val.x, a_val.y, a_val.z, a_val.relative)
+	};
+
+	struct ScaleRange : Range<float>
+	{
+		ScaleRange() :
+			Range(1.0f)
+		{}
+
+		bool relative{ false };
+	};
+
+	class BSTransform;
+
+	class BSTransformRange
+	{
+	public:
+		BSTransformRange() = default;
+
+		// members
+		Point3Range rotate;
+		Point3Range translate;
+		ScaleRange  scale;
+
+	private:
+		GENERATE_HASH(BSTransformRange, a_val.rotate, a_val.translate, a_val.scale)
 	};
 
 	class BSTransform
 	{
 	public:
-		constexpr BSTransform() noexcept
-		{
-			rotate = { 0.f, 0.f, 0.f };
-			translate = { 0.f, 0.f, 0.f };
-
-			scale = 1.0f;
-		}
-
-		constexpr BSTransform(const NiPoint3& a_rotate, const NiPoint3& a_translate, float a_scale) noexcept :
-			rotate(a_rotate),
-			translate(a_translate),
-			scale(a_scale)
+		constexpr BSTransform() noexcept :
+			rotate(0.f, 0.f, 0.f),
+			translate(0.f, 0.f, 0.f),
+			scale(1.0f),
+			relativeRotate(false),
+			relativeTranslate(false),
+			relativeScale(false)
 		{}
+
+		BSTransform(const BSTransformRange& a_transformRange, std::size_t a_seed) noexcept :
+			rotate(a_transformRange.rotate.value(a_seed)),
+			translate(a_transformRange.translate.value(a_seed)),
+			scale(a_transformRange.scale.value(a_seed)),
+			relativeRotate(a_transformRange.rotate.relative),
+			relativeTranslate(a_transformRange.translate.relative),
+			relativeScale(a_transformRange.scale.relative)
+		{}
+
 		bool operator==(const BSTransform& a_rhs) const;
 
 		// members
-		RE::NiPoint3 rotate{};
-		RE::NiPoint3 translate{};
-		float        scale{};
+		NiPoint3 rotate;
+		NiPoint3 translate;
+		float    scale;
+		bool     relativeRotate;
+		bool     relativeTranslate;
+		bool     relativeScale;
 
 	private:
-		GENERATE_HASH(BSTransform, a_val.rotate, a_val.translate, a_val.scale)
-	};
-
-	class BSTransformRange
-	{
-	public:
-		BSTransform value(std::size_t a_seed) const;
-
-		// members
-		Point3Range  rotate;
-		Point3Range  translate;
-		Range<float> scale{ .min = 1.0f };
-
-	private:
-		GENERATE_HASH(BSTransformRange, a_val.rotate, a_val.translate, a_val.scale)
+		GENERATE_HASH(BSTransform,
+			a_val.rotate,
+			a_val.translate,
+			a_val.scale,
+			a_val.relativeRotate,
+			a_val.relativeTranslate,
+			a_val.relativeScale)
 	};
 }
 
-template <>
-struct glz::meta<RE::BSTransform>
+template <class T>
+struct glz::meta<RE::Range<T>>
 {
-	using T = RE::BSTransform;
-	static constexpr auto read_rot = [](T& s, const RE::NiPoint3& input) {
-		s.rotate = input * RE::NI_PI / 180;
-	};
+	using U = RE::Range<T>;
 	static constexpr auto value = object(
-		"translate", &T::translate,
-		"rotate", glz::custom<read_rot, &T::rotate>,
-		"scale", &T::scale);
+		"min", &U::min,
+		"max", &U::max);
+};
+
+template <>
+struct glz::meta<RE::Point3Range>
+{
+	using T = RE::Point3Range;
+	static constexpr auto value = object(
+		"x", &T::x,
+		"y", &T::y,
+		"z", &T::z,
+		"relative", &T::relative);
+};
+
+template <>
+struct glz::meta<RE::ScaleRange>
+{
+	using T = RE::ScaleRange;
+	static constexpr auto value = object(
+		"min", &T::min,
+		"max", &T::max,
+		"relative", &T::relative);
 };
 
 template <>
@@ -105,7 +196,23 @@ struct glz::meta<RE::BSTransformRange>
 {
 	using T = RE::BSTransformRange;
 	static constexpr auto read_rot = [](T& s, const RE::Point3Range& input) {
-		s.rotate = input.deg_to_rad();
+		s.rotate = RE::Point3Range(input, RE::Point3Range::Convert::kDegToRad);
+	};
+	static constexpr auto write_rot = [](T& s) {
+		return RE::Point3Range(s.rotate, RE::Point3Range::Convert::kRadToDeg);
+	};
+	static constexpr auto value = object(
+		"translate", &T::translate,
+		"rotate", glz::custom<read_rot, write_rot>,
+		"scale", &T::scale);
+};
+
+template <>
+struct glz::meta<RE::BSTransform>
+{
+	using T = RE::BSTransform;
+	static constexpr auto read_rot = [](T& s, const RE::NiPoint3& input) {
+		s.rotate = input * RE::NI_PI / 180;
 	};
 	static constexpr auto value = object(
 		"translate", &T::translate,

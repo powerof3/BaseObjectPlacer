@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Config/Format.h"
+#include "Config/Object.h"
 #include "Game/CreatedObject.h"
 #include "Game/Object.h"
 

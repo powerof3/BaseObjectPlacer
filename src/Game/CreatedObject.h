@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Config/Format.h"
 #include "Game/Object.h"
 
 struct CreatedObjects

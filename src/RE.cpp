@@ -35,10 +35,6 @@ namespace RE
 			}
 		} else if (string::is_only_hex(a_str, true)) {
 			return string::to_num<FormID>(a_str, true);
-		} else {
-			if (const auto form = TESForm::LookupByEditorID(a_str)) {
-				return form->GetFormID();
-			}
 		}
 		return static_cast<RE::FormID>(0);
 	}
@@ -79,7 +75,7 @@ namespace RE
 
 	std::uint32_t GetNumReferenceHandles()
 	{
-		const auto refrArray = RE::BSPointerHandleManager<RE::TESObjectREFR*>::GetHandleEntries();
+		const auto refrArray = BSPointerHandleManager<TESObjectREFR*>::GetHandleEntries();
 
 		std::uint32_t activeHandleCount = 0;
 
@@ -94,19 +90,19 @@ namespace RE
 
 	bool GetMaxFormIDReached()
 	{
-		return (RE::TESDataHandler::GetSingleton()->nextID & 0xFFFFFF) >= 0x3FFFFF;
+		return (TESDataHandler::GetSingleton()->nextID & 0xFFFFFF) >= 0x3FFFFF;
 	}
 
 	bool IsFormIDInUse(FormID a_formID)
 	{
-		return RE::TESForm::LookupByID(a_formID) || RE::BGSSaveLoadGame::GetSingleton()->IsFormIDInUse(a_formID);
+		return TESForm::LookupByID(a_formID) || BGSSaveLoadGame::GetSingleton()->IsFormIDInUse(a_formID);
 	}
 
 	NiPoint3 ApplyRotation(const NiPoint3& point, const NiPoint3& pivot, const RE::NiMatrix3& rotationMatrix)
 	{
 		// Translate point to local space
-		RE::NiPoint3 localPoint = point - pivot;
-		RE::NiPoint3 rotatedLocal = rotationMatrix * localPoint;
+		NiPoint3 localPoint = point - pivot;
+		NiPoint3 rotatedLocal = rotationMatrix * localPoint;
 		return rotatedLocal + pivot;
 	}
 
