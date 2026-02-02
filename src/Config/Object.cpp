@@ -29,7 +29,6 @@ namespace Config
 	{
 		std::vector<RE::FormID> checkedBases;
 		checkedBases.reserve(bases.size());
-
 		for (const auto& base : bases) {
 			if (auto formID = RE::GetFormID(base); formID != 0) {
 				checkedBases.emplace_back(formID);
@@ -58,29 +57,31 @@ namespace Config
 			return static_cast<std::uint32_t>(0);
 		};
 
-		for (const auto [transformIdx, transform] : std::views::enumerate(transforms)) {
-			if (auto arrayTransforms = array.GetTransforms(transform); arrayTransforms.empty()) {
-				std::size_t   objectHash = hash::combine(rootHash, transformIdx);
+		for (const auto [transformIdx, transformRange] : std::views::enumerate(transforms)) {
+			auto flags = Game::Object::Instance::GetInstanceFlags(transformRange, array);
+
+			std::size_t                   objectHash = hash::combine(rootHash, transformIdx);
+			if (auto arrayTransforms = array.GetTransforms(transformRange, objectHash); arrayTransforms.empty()) {
 				std::uint32_t baseIdx = get_base_idx(objectHash, shouldBeOrdered, transformIdx, false);
 
 				auto instanceHash = hash::combine(objectHash, baseIdx);
 				if (!data.RollChance(instanceHash)) {
 					continue;
 				}
-				gameObject.instances.emplace_back(baseIdx, transform, instanceHash);
+				gameObject.instances.emplace_back(baseIdx, transformRange, flags, instanceHash);
 
 			} else {
 				shouldBeOrdered = checkedBaseSize == arrayTransforms.size();
 
 				for (const auto [arrayIdx, arrayTransform] : std::views::enumerate(arrayTransforms)) {
-					std::size_t   objectHash = hash::combine(rootHash, transformIdx, arrayIdx);
+					objectHash = hash::combine(rootHash, transformIdx, arrayIdx);
 					std::uint32_t baseIdx = get_base_idx(objectHash, shouldBeOrdered, arrayIdx, true);
 
 					auto instanceHash = hash::combine(objectHash, baseIdx);
 					if (!data.RollChance(instanceHash)) {
 						continue;
 					}
-					gameObject.instances.emplace_back(baseIdx, arrayTransform, instanceHash);
+					gameObject.instances.emplace_back(baseIdx, transformRange, arrayTransform, flags, instanceHash);
 				}
 			}
 		}
@@ -90,7 +91,6 @@ namespace Config
 		}
 
 		gameObject.bases = std::move(checkedBases);
-		gameObject.transforms = transforms;
 		a_objectVec.push_back(std::move(gameObject));
 	}
 }

@@ -77,19 +77,13 @@ namespace RE
 		constexpr BSTransform() noexcept :
 			rotate(0.f, 0.f, 0.f),
 			translate(0.f, 0.f, 0.f),
-			scale(1.0f),
-			relativeRotate(false),
-			relativeTranslate(false),
-			relativeScale(false)
+			scale(1.0f)
 		{}
 
 		BSTransform(const BSTransformRange& a_transformRange, std::size_t a_seed) noexcept :
 			rotate(a_transformRange.rotate.value(a_seed)),
 			translate(a_transformRange.translate.value(a_seed)),
-			scale(a_transformRange.scale.value(a_seed)),
-			relativeRotate(a_transformRange.rotate.relative),
-			relativeTranslate(a_transformRange.translate.relative),
-			relativeScale(a_transformRange.scale.relative)
+			scale(a_transformRange.scale.value(a_seed))
 		{}
 
 		bool operator==(const BSTransform& a_rhs) const;
@@ -98,18 +92,12 @@ namespace RE
 		NiPoint3 rotate;
 		NiPoint3 translate;
 		float    scale;
-		bool     relativeRotate;
-		bool     relativeTranslate;
-		bool     relativeScale;
 
 	private:
 		GENERATE_HASH(BSTransform,
 			a_val.rotate,
 			a_val.translate,
-			a_val.scale,
-			a_val.relativeRotate,
-			a_val.relativeTranslate,
-			a_val.relativeScale)
+			a_val.scale)
 	};
 }
 

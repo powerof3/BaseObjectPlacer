@@ -4,8 +4,9 @@
 
 namespace Config
 {
-	struct SharedData;
+	struct ObjectArray;
 	class Object;
+	struct SharedData;
 }
 
 namespace Game
@@ -85,23 +86,30 @@ namespace Game
 	public:
 		struct Instance
 		{
+			enum class Flags
+			{
+				kNone = 0,
+				kRandomizeRotation = 1 << 0,
+				kRandomizeScale = 1 << 1,
+				kRelativeTranslate = 1 << 2,
+				kRelativeRotate = 1 << 3,
+				kRelativeScale = 1 << 4,
+			};
+
 			Instance() = default;
-			Instance(std::uint32_t a_baseIndex, const RE::BSTransform& a_transform, std::size_t a_hash) :
-				baseIndex(a_baseIndex),
-				transform(a_transform),
-				hash(a_hash)
-			{}
-			Instance(std::uint32_t a_baseIndex, const RE::BSTransformRange& a_range, std::size_t a_hash) :
-				baseIndex(a_baseIndex),
-				transform(a_range, a_hash),
-				hash(a_hash)
-			{}
+			Instance(std::uint32_t a_baseIndex, const RE::BSTransformRange& a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash);
+			Instance(std::uint32_t a_baseIndex, const RE::BSTransformRange& a_range, Flags a_flags, std::size_t a_hash);
 
-			RE::BSTransform GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle) const;
+			static Flags GetInstanceFlags(const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array);
 
-			std::uint32_t   baseIndex{ 0 };
-			RE::BSTransform transform;
-			std::size_t     hash;
+			RE::BSTransform GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle, std::size_t a_hash) const;
+
+			// members
+			std::uint32_t                      baseIndex{ 0 };
+			RE::BSTransform                    transform;
+			RE::BSTransformRange               transformRange;
+			REX::EnumSet<Flags, std::uint32_t> flags;
+			std::size_t                        hash;
 		};
 
 		Object() = default;
@@ -111,10 +119,9 @@ namespace Game
 		void SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool a_doRayCast) const;
 
 		// members
-		SharedData                        data;
-		std::vector<RE::FormID>           bases;
-		std::vector<Instance>             instances;
-		std::vector<RE::BSTransformRange> transforms;
+		SharedData              data;
+		std::vector<RE::FormID> bases;
+		std::vector<Instance>   instances;
 	};
 
 	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::Object>>;

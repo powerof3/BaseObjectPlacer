@@ -181,13 +181,57 @@ void Game::SharedData::AttachScripts(RE::TESObjectREFR* a_ref) const
 	}
 }
 
-RE::BSTransform Game::Object::Instance::GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle) const
+Game::Object::Instance::Instance(std::uint32_t a_baseIndex, const RE::BSTransformRange& a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash) :
+	baseIndex(a_baseIndex),
+	transform(a_transform),
+	transformRange(a_range),
+	flags(a_flags),
+	hash(a_hash)
+{}
+
+Game::Object::Instance::Instance(std::uint32_t a_baseIndex, const RE::BSTransformRange& a_range, Flags a_flags, std::size_t a_hash) :
+	baseIndex(a_baseIndex),
+	transform(a_range, a_hash),
+	transformRange(a_range),
+	flags(a_flags),
+	hash(a_hash)
+{}
+
+Game::Object::Instance::Flags Game::Object::Instance::GetInstanceFlags(const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array)
+{
+	REX::EnumSet flags(Flags::kNone);
+	if (a_range.translate.relative) {
+		flags.set(Flags::kRelativeTranslate);
+	}
+	if (a_range.rotate.relative) {
+		flags.set(Flags::kRelativeRotate);
+	}
+	if (a_range.scale.relative) {
+		flags.set(Flags::kRelativeScale);
+	}
+	if (a_array.flags.any(Config::ObjectArray::Flags::kRandomizeRotation)) {
+		flags.set(Flags::kRandomizeRotation);
+	}
+	if (a_array.flags.any(Config::ObjectArray::Flags::kRandomizeScale)) {
+		flags.set(Flags::kRandomizeScale);
+	}
+	return *flags;
+}
+
+RE::BSTransform Game::Object::Instance::GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle, std::size_t a_hash) const
 {
 	RE::BSTransform newTransform = transform;
 	newTransform.translate += a_refPos;
-	if (newTransform.relativeRotate) {
+	if (flags.any(Flags::kRandomizeRotation)) {
+		newTransform.rotate = transformRange.rotate.value(a_hash);
+		RE::WrapAngle(newTransform.rotate);
+	}
+	if (flags.any(Flags::kRelativeRotate)) {
 		newTransform.rotate += a_refAngle;
 		RE::WrapAngle(newTransform.rotate);
+	}
+	if (flags.any(Flags::kRandomizeScale)) {
+		newTransform.scale = transformRange.scale.value(a_hash);
 	}
 	return newTransform;
 }
@@ -214,6 +258,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 
 	const auto refPos = a_ref ? a_ref->GetPosition() : RE::NiPoint3();
 	const auto refAngle = a_ref ? a_ref->GetAngle() : RE::NiPoint3();
+	const auto refScale = a_ref ? a_ref->GetScale() : 1.0f;
 
 	std::vector<RE::TESBoundObject*> forms;
 	forms.reserve(bases.size());
@@ -238,7 +283,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 		}
 
 		const auto baseObject = forms[instance.baseIndex];
-		auto       transform = instance.GetWorldTransform(refPos, refAngle);
+		auto       transform = instance.GetWorldTransform(refPos, refAngle, hash);
 		/*if (a_doRayCast && (data.motionType.type == RE::hkpMotion::MotionType::kKeyframed || !RE::CanBeMoved(baseObject))) {
 			RE::NiPoint3 halfExtents{
 				static_cast<float>(baseObject->boundData.boundMax.x - baseObject->boundData.boundMin.x),
@@ -261,8 +306,13 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 			true);
 
 		if (auto createdRef = createdRefHandle.get()) {
-			createdRef->SetScale(transform.scale);
-			createdRef->AddChange(RE::TESObjectREFR::ChangeFlags::kScale);
+			if (float scale = transform.scale; scale != 1.0f) {
+				if (instance.flags.any(Instance::Flags::kRelativeScale)) {
+					scale *= refScale;
+				}
+				createdRef->SetScale(scale);
+				createdRef->AddChange(RE::TESObjectREFR::ChangeFlags::kScale);				
+			}
 
 			SetProperties(createdRef.get(), hash);
 

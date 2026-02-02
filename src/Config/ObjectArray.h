@@ -79,7 +79,7 @@ namespace Config
 			Word>;
 
 		static RE::NiPoint3          GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count);
-		std::vector<RE::BSTransform> GetTransforms(const RE::BSTransformRange& a_pivotRange) const;
+		std::vector<RE::BSTransform> GetTransforms(const RE::BSTransformRange& a_pivotRange, std::size_t a_hash) const;
 
 		// members
 		ArrayVariant                       array;

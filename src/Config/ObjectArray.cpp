@@ -130,16 +130,18 @@ namespace Config
 		return RE::NiPoint3(rotX, rotY, rotZ) / static_cast<float>(a_count);
 	}
 
-	std::vector<RE::BSTransform> ObjectArray::GetTransforms(const RE::BSTransformRange& a_pivotRange) const
+	std::vector<RE::BSTransform> ObjectArray::GetTransforms(const RE::BSTransformRange& a_pivotRange, std::size_t a_hash) const
 	{
 		std::vector<RE::BSTransform> arrayTransforms{};
 		RE::BSTransform              pivot{};
+
+		const std::size_t rngSeed = hash::combine(a_hash, seed);
 
 		std::visit(overload{
 					   [](std::monostate) {
 					   },
 					   [&](const auto& generator) {
-						   pivot = RE::BSTransform(a_pivotRange, seed);
+						   pivot = RE::BSTransform(a_pivotRange, rngSeed);
 						   generator.GetTransforms(pivot, arrayTransforms);
 					   } },
 			array);
@@ -148,37 +150,41 @@ namespace Config
 			return arrayTransforms;
 		}
 
-		if (flags.any(Flags::kRandomizeRotation, Flags::kRandomizeScale, Flags::kIncrementRotation, Flags::kIncrementScale)) {
-			bool randomizeRot = flags.any(Flags::kRandomizeRotation);
-			bool randomizeScale = flags.any(Flags::kRandomizeScale);
+		const bool randomizeRot = flags.any(Flags::kRandomizeRotation);
+		const bool randomizeScale = flags.any(Flags::kRandomizeScale);
+		const bool incrementRot = flags.any(Flags::kIncrementRotation);
+		const bool incrementScale = flags.any(Flags::kIncrementScale);
 
-			bool incrementRot = flags.any(Flags::kIncrementRotation);
-			bool incrementScale = flags.any(Flags::kIncrementScale);
-
-			auto count = arrayTransforms.size() - 1;
-			auto rotStep = GetRotationStep(a_pivotRange, count);
-			auto scaleStep = a_pivotRange.scale.max ? ((a_pivotRange.scale.max.value() - a_pivotRange.scale.min) / static_cast<float>(count)) : 0.0f;
+		if (randomizeRot || randomizeScale || incrementRot || incrementScale) {
+			RE::NiPoint3 rotStep{};
+			float        scaleStep{};
+			
+			if (incrementRot || incrementScale) {
+				const auto count = arrayTransforms.size() - 1;
+				if (incrementRot) {
+					rotStep = GetRotationStep(a_pivotRange, count);
+				}
+				if (incrementScale) {
+					scaleStep = a_pivotRange.scale.max ? ((a_pivotRange.scale.max.value() - a_pivotRange.scale.min) / static_cast<float>(count)) : 0.0f;
+				}
+			}
 
 			for (std::size_t idx = 0; idx < arrayTransforms.size(); ++idx) {
-				auto& transform = arrayTransforms[idx];
-				if (randomizeRot || randomizeScale) {
-					std::size_t rngSeed = seed;
-					boost::hash_combine(rngSeed, idx);
-					if (randomizeRot) {
-						transform.rotate = a_pivotRange.rotate.value(rngSeed);
-					}
-					if (randomizeScale) {
-						transform.scale = a_pivotRange.scale.value(rngSeed);
-					}
-				} else {
-					if (incrementRot) {
-						auto rot = a_pivotRange.rotate.min() + (rotStep * static_cast<float>(idx));
-						RE::WrapAngle(rot);
-						transform.rotate = rot;
-					}
-					if (incrementScale) {
-						transform.scale = a_pivotRange.scale.min + (scaleStep * static_cast<float>(idx));
-					}
+				auto&      transform = arrayTransforms[idx];
+				const auto idxSeed = hash::combine(rngSeed, idx);
+
+				if (randomizeRot) {
+					transform.rotate = a_pivotRange.rotate.value(idxSeed);
+				} else if (incrementRot) {
+					auto rot = a_pivotRange.rotate.min() + (rotStep * static_cast<float>(idx));
+					RE::WrapAngle(rot);
+					transform.rotate = rot;
+				}
+
+				if (randomizeScale) {
+					transform.scale = a_pivotRange.scale.value(idxSeed);
+				} else if (incrementScale) {
+					transform.scale = a_pivotRange.scale.min + (scaleStep * static_cast<float>(idx));
 				}
 			}
 		}
