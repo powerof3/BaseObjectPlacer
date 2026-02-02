@@ -227,7 +227,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 			hash = hash::combine(instance.hash, a_ref->GetLocalFormID(), a_ref->GetFile(0)->fileName);
 			Manager::GetSingleton()->AddConfigObject(hash, this);
 		}
-		
+
 		if (auto id = Manager::GetSingleton()->GetSavedObject(hash); id != 0) {
 			logger::info("\t[{:X}]{:X} already exists, skipping spawn.", hash, id);
 			continue;

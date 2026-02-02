@@ -16,9 +16,9 @@
 #include <ClibUtil/distribution.hpp>
 #include <ClibUtil/simpleINI.hpp>
 #include <MergeMapperPluginAPI.h>
-#include <boost/unordered/unordered_node_map.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
+#include <boost/unordered/unordered_node_map.hpp>
 #include <glaze/glaze.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <srell.hpp>
