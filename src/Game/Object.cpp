@@ -222,8 +222,14 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 	}
 
 	for (auto& instance : instances) {
-		if (auto id = Manager::GetSingleton()->GetSavedObject(instance.hash); id != 0) {
-			logger::info("\t[{:X}]{:X} already exists, skipping spawn.", instance.hash, id);
+		auto hash = instance.hash;
+		if (a_ref && !a_ref->IsDynamicForm()) {
+			hash = hash::combine(instance.hash, a_ref->GetLocalFormID(), a_ref->GetFile(0)->fileName);
+			Manager::GetSingleton()->AddConfigObject(hash, this);
+		}
+		
+		if (auto id = Manager::GetSingleton()->GetSavedObject(hash); id != 0) {
+			logger::info("\t[{:X}]{:X} already exists, skipping spawn.", hash, id);
 			continue;
 		}
 
@@ -231,8 +237,16 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 			continue;
 		}
 
-		auto baseObject = forms[instance.baseIndex];
-		auto transform = instance.GetWorldTransform(refPos, refAngle);
+		const auto baseObject = forms[instance.baseIndex];
+		auto       transform = instance.GetWorldTransform(refPos, refAngle);
+		/*if (a_doRayCast && (data.motionType.type == RE::hkpMotion::MotionType::kKeyframed || !RE::CanBeMoved(baseObject))) {
+			RE::NiPoint3 halfExtents{
+				static_cast<float>(baseObject->boundData.boundMax.x - baseObject->boundData.boundMin.x),
+				static_cast<float>(baseObject->boundData.boundMax.y - baseObject->boundData.boundMin.y),
+				static_cast<float>(baseObject->boundData.boundMax.z - baseObject->boundData.boundMin.z)
+			};
+			transform.translate = RE::ValidateSpawnPosition(a_cell, a_ref, refPos, transform, halfExtents);
+		}*/
 
 		auto createdRefHandle = a_dataHandler->CreateReferenceAtLocation(
 			baseObject,
@@ -250,11 +264,11 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 			createdRef->SetScale(transform.scale);
 			createdRef->AddChange(RE::TESObjectREFR::ChangeFlags::kScale);
 
-			SetProperties(createdRef.get(), instance.hash);
+			SetProperties(createdRef.get(), hash);
 
-			Manager::GetSingleton()->SerializeObject(instance.hash, createdRef, data.IsTemporary());
+			Manager::GetSingleton()->SerializeObject(hash, createdRef, data.IsTemporary());
 
-			logger::info("\tSpawning new object {:X} with hash {:X}.", createdRef->GetFormID(), instance.hash);
+			logger::info("\tSpawning new object {:X} with hash {:X}.", createdRef->GetFormID(), hash);
 		}
 	}
 }

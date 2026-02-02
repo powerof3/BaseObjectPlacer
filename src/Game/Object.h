@@ -111,9 +111,10 @@ namespace Game
 		void SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool a_doRayCast) const;
 
 		// members
-		SharedData              data;
-		std::vector<RE::FormID> bases;
-		std::vector<Instance>   instances;
+		SharedData                        data;
+		std::vector<RE::FormID>           bases;
+		std::vector<Instance>             instances;
+		std::vector<RE::BSTransformRange> transforms;
 	};
 
 	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::Object>>;

@@ -90,6 +90,7 @@ namespace Config
 		}
 
 		gameObject.bases = std::move(checkedBases);
+		gameObject.transforms = transforms;
 		a_objectVec.push_back(std::move(gameObject));
 	}
 }

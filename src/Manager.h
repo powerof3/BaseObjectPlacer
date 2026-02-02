@@ -19,6 +19,7 @@ public:
 
 	RE::FormID          GetSavedObject(std::size_t a_hash) const;
 	const Game::Object* GetConfigObject(std::size_t a_hash);
+	void                AddConfigObject(std::size_t a_hash, const Game::Object* gameObject);
 
 	void LoadFiles(std::string_view a_save);
 	void SaveFiles(std::string_view a_save);
@@ -81,7 +82,7 @@ private:
 	// members
 	Config::Format                            configs;
 	Game::Format                              game;
-	FlatMap<std::size_t, const Game::Object*> configObjects;  // static. [entry hash, ptr to game object inside configs]
+	NodeMap<std::size_t, const Game::Object*> configObjects;  // [entry hash, ptr to game object inside configs]
 	CreatedObjects                            savedObjects;
 	CreatedObjects                            tempObjects;
 	std::optional<std::filesystem::path>      saveDirectory;

@@ -2,54 +2,6 @@
 
 namespace RE
 {
-	template <class T>
-		requires std::is_arithmetic_v<T>
-	struct Range
-	{
-		Range() = default;
-
-		explicit Range(T a_min) :
-			min(a_min)
-		{}
-
-		bool operator==(const Range& a_rhs) const { return min == a_rhs.min && max == a_rhs.max; }
-
-		[[nodiscard]] T value(std::size_t seed) const
-		{
-			return (!max || min == *max) ? min :
-			                               clib_util::RNG(seed).generate<T>(min, *max);
-		}
-
-		[[nodiscard]] Range deg_to_rad() const
-			requires std::is_floating_point_v<T>
-		{
-			Range range;
-			range.min = RE::deg_to_rad(min);
-			if (max) {
-				range.max = RE::deg_to_rad(*max);
-			}
-			return range;
-		}
-
-		[[nodiscard]] Range rad_to_deg() const
-			requires std::is_floating_point_v<T>
-		{
-			Range range;
-			range.min = RE::rad_to_deg(min);
-			if (max) {
-				range.max = RE::rad_to_deg(*max);
-			}
-			return range;
-		}
-
-		// memebrs
-		T                min{};
-		std::optional<T> max{};
-
-	private:
-		GENERATE_HASH(Range, a_val.min, a_val.max)
-	};
-
 	struct Point3Range
 	{
 		enum class Convert
@@ -160,15 +112,6 @@ namespace RE
 			a_val.relativeScale)
 	};
 }
-
-template <class T>
-struct glz::meta<RE::Range<T>>
-{
-	using U = RE::Range<T>;
-	static constexpr auto value = object(
-		"min", &U::min,
-		"max", &U::max);
-};
 
 template <>
 struct glz::meta<RE::Point3Range>

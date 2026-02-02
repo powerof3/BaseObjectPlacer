@@ -214,14 +214,6 @@ void Manager::ProcessConfigObjects()
 			}
 		}
 	}
-
-	for (const auto& [id, objectVec] : game.objects) {
-		for (const auto& object : objectVec) {
-			for (auto& instance : object.instances) {
-				configObjects.emplace(instance.hash, &object);
-			}
-		}
-	}
 }
 
 void Manager::PlaceInLoadedArea()
@@ -487,6 +479,11 @@ const Game::Object* Manager::GetConfigObject(std::size_t a_hash)
 {
 	auto it = configObjects.find(a_hash);
 	return it != configObjects.end() ? it->second : nullptr;
+}
+
+void Manager::AddConfigObject(std::size_t a_hash, const Game::Object* gameObject)
+{
+	configObjects.emplace(a_hash, gameObject);
 }
 
 RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESCellFullyLoadedEvent* a_event, RE::BSTEventSource<RE::TESCellFullyLoadedEvent>*)

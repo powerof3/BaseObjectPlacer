@@ -58,9 +58,14 @@ namespace RE
 			return false;
 		}
 
-		switch (base->GetFormType()) {
+		return CanBeMoved(base);
+	}
+
+	bool CanBeMoved(const TESForm* a_base)
+	{
+		switch (a_base->GetFormType()) {
 		case FormType::Static:
-			return base->IsHeadingMarker();
+			return a_base->IsHeadingMarker();
 		case FormType::StaticCollection:
 		case FormType::MovableStatic:
 		case FormType::Grass:

@@ -16,6 +16,7 @@
 #include <ClibUtil/distribution.hpp>
 #include <ClibUtil/simpleINI.hpp>
 #include <MergeMapperPluginAPI.h>
+#include <boost/unordered/unordered_node_map.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
 #include <glaze/glaze.hpp>
@@ -41,6 +42,9 @@ struct overload : Ts...
 {
 	using Ts::operator()...;
 };
+
+template <class K, class D, class H = boost::hash<K>, class KEqual = std::equal_to<K>>
+using NodeMap = boost::unordered_node_map<K, D, H, KEqual>;
 
 template <class K, class D, class H = boost::hash<K>, class KEqual = std::equal_to<K>>
 using FlatMap = boost::unordered_flat_map<K, D, H, KEqual>;
