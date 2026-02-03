@@ -18,6 +18,8 @@ namespace Config
 		BSScript::ConfigScripts                           scripts;
 		std::vector<std::string>                          conditions;
 		Data::MotionType                                  motionType;
+		std::vector<std::string>                          whiteList;
+		std::vector<std::string>                          blackList;
 		REX::EnumSet<Data::ReferenceFlags, std::uint32_t> flags;
 		float                                             chance{ 1.0f };
 
@@ -27,6 +29,8 @@ namespace Config
 			a_val.scripts,
 			a_val.conditions,
 			a_val.motionType,
+			a_val.whiteList,
+			a_val.blackList,
 			a_val.flags.underlying(),
 			a_val.chance);
 	};
@@ -125,6 +129,8 @@ struct glz::meta<ConfigObject>
 		"array", &T::array,
 		"flags", glz::custom<read_flags, write_flags>,
 		"motionType", [](auto&& self) -> auto& { return self.data.motionType; },
+		"blackList", [](auto&& self) -> auto& { return self.data.blackList; },
+		"whiteList", [](auto&& self) -> auto& { return self.data.whiteList; },
 		"extraData", [](auto&& self) -> auto& { return self.data.extraData; },
 		"scripts", [](auto&& self) -> auto& { return self.data.scripts; },
 		"conditions", [](auto&& self) -> auto& { return self.data.conditions; },

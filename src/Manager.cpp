@@ -160,7 +160,7 @@ void Manager::ProcessConfigs()
 		auto splitAttachFormStrs = string::split(attachFormStrs, ",");
 
 		for (auto& attachFormStr : splitAttachFormStrs) {
-			const auto attachFormID = RE::GetUncheckedFormID(attachFormStr);
+			const auto attachFormID = RE::GetRawFormID(attachFormStr);
 
 			auto& to = (attachFormID != 0) ?
 			               game.objects[attachFormID] :
@@ -224,7 +224,9 @@ void Manager::PlaceInLoadedArea()
 	RE::TES::GetSingleton()->ForEachCell([this, placeAtReferences, placeInCells](auto* cell) {
 		if (placeAtReferences) {
 			cell->ForEachReference([this](auto* ref) {
-				SpawnAtReference(ref);
+				if (!ref->IsDynamicForm()) {
+					SpawnAtReference(ref);					
+				}
 				return RE::BSContainer::ForEachResult::kContinue;
 			});
 		}

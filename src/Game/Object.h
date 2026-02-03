@@ -11,10 +11,43 @@ namespace Config
 
 namespace Game
 {
+	struct ObjectFilter
+	{
+		using FilterEntry = std::variant<RE::FormID, std::string>;
+
+		struct Input
+		{
+			Input() = default;
+			Input(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell);
+
+			// members
+			RE::TESObjectREFR*  ref;
+			RE::TESBoundObject* baseObj;
+			std::string_view    fileName;
+			std::string_view    cellEDID;
+		};
+
+		ObjectFilter() = default;
+		explicit ObjectFilter(const Config::SharedData& a_data);
+
+		bool IsAllowed(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) const;
+
+		// members
+		std::vector<FilterEntry> whiteList;
+		std::vector<FilterEntry> blackList;
+
+	private:
+		static bool CheckList(const std::vector<FilterEntry>& a_list, const Input& input);
+		static bool MatchFormID(RE::FormID a_id, const Input& input);
+		static bool MatchString(const std::string& a_str, const Input& input);
+	};
+
 	struct SharedData
 	{
 		SharedData() = default;
 		explicit SharedData(const Config::SharedData& a_data);
+
+		bool PassesFilters(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) const;
 
 		bool IsTemporary() const;
 
@@ -27,6 +60,7 @@ namespace Game
 		BSScript::GameScripts                             scripts;
 		std::shared_ptr<RE::TESCondition>                 conditions;
 		Data::MotionType                                  motionType;
+		ObjectFilter                                      filter;
 		REX::EnumSet<Data::ReferenceFlags, std::uint32_t> flags;
 		float                                             chance{ 1.0f };
 

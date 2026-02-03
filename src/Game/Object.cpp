@@ -3,10 +3,103 @@
 #include "Config/Object.h"
 #include "Manager.h"
 
+Game::ObjectFilter::Input::Input(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) :
+	ref(a_ref),
+	baseObj(a_ref ? a_ref->GetBaseObject() : nullptr),
+	fileName(a_ref ? a_ref->GetFile(0)->fileName : ""sv),
+	cellEDID(a_cell->GetFormEditorID())
+{}
+
+Game::ObjectFilter::ObjectFilter(const Config::SharedData& a_data)
+{
+	whiteList.reserve(a_data.whiteList.size());
+	for (const auto& str : a_data.whiteList) {
+		if (const auto formID = RE::GetRawFormID(str, true); formID != 0) {
+			whiteList.emplace_back(formID);
+		} else {
+			whiteList.emplace_back(str);
+		}
+	}
+
+	blackList.reserve(a_data.blackList.size());
+	for (const auto& str : a_data.blackList) {
+		if (const auto formID = RE::GetRawFormID(str, true); formID != 0) {
+			blackList.emplace_back(formID);
+		} else {
+			blackList.emplace_back(str);
+		}
+	}
+}
+
+bool Game::ObjectFilter::IsAllowed(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) const
+{
+	if (blackList.empty() && whiteList.empty()) {
+		return true;
+	}
+
+	const Input input(a_ref, a_cell);
+
+	if (CheckList(blackList, input)) {
+		return false;
+	}
+	if (!whiteList.empty() && !CheckList(whiteList, input)) {
+		return false;
+	}
+	return true;
+}
+
+bool Game::ObjectFilter::CheckList(const std::vector<FilterEntry>& a_list, const Input& input)
+{
+	for (const auto& entry : a_list) {
+		bool matched = false;
+		std::visit(overload{
+					   [&](RE::FormID a_id) {
+						   matched = MatchFormID(a_id, input);
+					   },
+					   [&](const std::string& a_str) {
+						   matched = MatchString(a_str, input);
+					   } },
+			entry);
+		if (matched) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool Game::ObjectFilter::MatchFormID(RE::FormID a_id, const Input& input)
+{
+	if (input.ref && input.ref->GetFormID() == a_id || input.baseObj && input.baseObj->GetFormID() == a_id) {
+		return true;
+	}
+
+	if (const auto list = RE::TESForm::LookupByID<RE::BGSListForm>(a_id)) {
+		bool hasForm = false;
+		list->ForEachForm([&](auto* form) {
+			if (form == input.ref || form == input.baseObj) {
+				hasForm = true;
+				return RE::BSContainer::ForEachResult::kStop;
+			}
+			return RE::BSContainer::ForEachResult::kContinue;
+		});
+		if (hasForm) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Game::ObjectFilter::MatchString(const std::string& a_str, const Input& input)
+{
+	return a_str == input.fileName || a_str == input.cellEDID;
+}
+
 Game::SharedData::SharedData(const Config::SharedData& a_data) :
 	extraData(a_data.extraData),
 	conditions(ConditionParser::BuildCondition(a_data.conditions)),
 	motionType(a_data.motionType),
+	filter(a_data),
 	flags(a_data.flags),
 	chance(a_data.chance)
 {
@@ -14,6 +107,21 @@ Game::SharedData::SharedData(const Config::SharedData& a_data) :
 	for (const auto& script : a_data.scripts) {
 		scripts.emplace_back(script);
 	}
+}
+
+bool Game::SharedData::PassesFilters(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) const
+{
+	if (conditions) {
+		if (auto conditionRef = a_ref ? a_ref : RE::PlayerCharacter::GetSingleton(); !conditions->IsTrue(conditionRef, conditionRef)) {
+			return false;
+		}
+	}
+
+	if (!filter.IsAllowed(a_ref, a_cell)) {
+		return false;
+	}
+
+	return true;
 }
 
 bool Game::SharedData::IsTemporary() const
@@ -249,11 +357,8 @@ void Game::Object::SetProperties(RE::TESObjectREFR* a_ref, std::size_t hash) con
 
 void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool) const
 {
-	if (data.conditions) {
-		auto conditionRef = a_ref ? a_ref : RE::PlayerCharacter::GetSingleton();
-		if (!data.conditions->IsTrue(conditionRef, conditionRef)) {
-			return;
-		}
+	if (!data.PassesFilters(a_ref, a_cell)) {
+		return;
 	}
 
 	const auto refPos = a_ref ? a_ref->GetPosition() : RE::NiPoint3();
@@ -311,7 +416,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 					scale *= refScale;
 				}
 				createdRef->SetScale(scale);
-				createdRef->AddChange(RE::TESObjectREFR::ChangeFlags::kScale);				
+				createdRef->AddChange(RE::TESObjectREFR::ChangeFlags::kScale);
 			}
 
 			SetProperties(createdRef.get(), hash);

@@ -22,7 +22,7 @@ namespace RE
 		return form;
 	}
 
-	FormID GetUncheckedFormID(const std::string& a_str)
+	FormID GetRawFormID(const std::string& a_str, bool a_checkEDID)
 	{
 		if (const auto splitID = string::split(a_str, "~"); splitID.size() == 2) {
 			const auto  formID = string::to_num<FormID>(splitID[0], true);
@@ -35,8 +35,14 @@ namespace RE
 			}
 		} else if (string::is_only_hex(a_str, true)) {
 			return string::to_num<FormID>(a_str, true);
+		} else {
+			if (a_checkEDID) {
+				if (const auto form = TESForm::LookupByEditorID(a_str)) {
+					return form->GetFormID();
+				}
+			}
 		}
-		return static_cast<RE::FormID>(0);
+		return static_cast<FormID>(0);
 	}
 
 	FormID GetFormID(const std::string& a_str)

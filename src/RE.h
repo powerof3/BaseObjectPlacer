@@ -73,7 +73,7 @@ namespace RE
 	}
 
 	TESForm*    GetForm(const std::string& a_str);
-	FormID      GetUncheckedFormID(const std::string& a_str);
+	FormID      GetRawFormID(const std::string& a_str, bool a_checkEDID = false);
 	FormID      GetFormID(const std::string& a_str);
 	std::string GetEditorID(const std::string& a_str);
 
