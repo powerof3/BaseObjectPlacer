@@ -160,6 +160,7 @@ namespace Game
 
 	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::Object>>;
 	using EditorIDObjectMap = StringMap<std::vector<Game::Object>>;
+	using FormTypeObjectMap = FlatMap<RE::FormType, std::vector<Game::Object>>;
 
 	struct Format
 	{
@@ -167,10 +168,15 @@ namespace Game
 		{
 			cells.clear();
 			objects.clear();
+			objectTypes.clear();
 		}
+
+		void SpawnInCell(RE::TESObjectCELL* a_cell);
+		void SpawnAtReference(RE::TESObjectREFR* a_ref);
 
 		// members
 		EditorIDObjectMap cells;
 		FormIDObjectMap   objects;
+		FormTypeObjectMap objectTypes;
 	};
 }

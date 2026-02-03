@@ -30,16 +30,15 @@ namespace RE
 			if (g_mergeMapperInterface) {
 				const auto [mergedModName, mergedFormID] = g_mergeMapperInterface->GetNewFormID(modName.c_str(), formID);
 				return TESDataHandler::GetSingleton()->LookupFormID(mergedFormID, mergedModName);
-			} else {
-				return TESDataHandler::GetSingleton()->LookupFormID(formID, modName);
 			}
-		} else if (string::is_only_hex(a_str, true)) {
+			return TESDataHandler::GetSingleton()->LookupFormID(formID, modName);
+		}
+		if (string::is_only_hex(a_str, true)) {
 			return string::to_num<FormID>(a_str, true);
-		} else {
-			if (a_checkEDID) {
-				if (const auto form = TESForm::LookupByEditorID(a_str)) {
-					return form->GetFormID();
-				}
+		}
+		if (a_checkEDID) {
+			if (const auto form = TESForm::LookupByEditorID(a_str)) {
+				return form->GetFormID();
 			}
 		}
 		return static_cast<FormID>(0);
@@ -109,7 +108,7 @@ namespace RE
 		return TESForm::LookupByID(a_formID) || BGSSaveLoadGame::GetSingleton()->IsFormIDInUse(a_formID);
 	}
 
-	NiPoint3 ApplyRotation(const NiPoint3& point, const NiPoint3& pivot, const RE::NiMatrix3& rotationMatrix)
+	NiPoint3 ApplyRotation(const NiPoint3& point, const NiPoint3& pivot, const NiMatrix3& rotationMatrix)
 	{
 		// Translate point to local space
 		NiPoint3 localPoint = point - pivot;

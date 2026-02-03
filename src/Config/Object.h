@@ -67,6 +67,7 @@ namespace Config
 		REL::Version version{ 1, 0, 0, 0 };
 		ObjectMap    cells;
 		ObjectMap    objects;
+		ObjectMap    objectTypes;
 	};
 }
 
@@ -144,5 +145,6 @@ struct glz::meta<Config::Format>
 	static constexpr auto value = object(
 		"version", &T::version,
 		"cells", &T::cells,
-		"objects", &T::objects);
+		"objects", &T::objects,
+		"objectTypes", &T::objectTypes);
 };

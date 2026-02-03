@@ -373,7 +373,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 
 	for (auto& instance : instances) {
 		auto hash = instance.hash;
-		if (a_ref && !a_ref->IsDynamicForm()) {
+		if (a_ref) {
 			hash = hash::combine(instance.hash, a_ref->GetLocalFormID(), a_ref->GetFile(0)->fileName);
 			Manager::GetSingleton()->AddConfigObject(hash, this);
 		}
@@ -384,6 +384,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 		}
 
 		if (RE::GetNumReferenceHandles() >= 1000000 || RE::GetMaxFormIDReached()) {  // max id reached
+			logger::info("\t[{:X}] Maximum number of handles/FF formIDs reached. Skipping.", hash);
 			continue;
 		}
 
@@ -425,5 +426,66 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 
 			logger::info("\tSpawning new object {:X} with hash {:X}.", createdRef->GetFormID(), hash);
 		}
+	}
+}
+
+void Game::Format::SpawnInCell(RE::TESObjectCELL* a_cell)
+{
+	if (auto it = cells.find(a_cell->GetFormEditorID()); it != cells.end()) {
+		const auto dataHandler = RE::TESDataHandler::GetSingleton();
+		for (const auto& object : it->second) {
+			object.SpawnObject(dataHandler, nullptr, a_cell, a_cell->worldSpace, false);
+		}
+	}
+}
+
+void Game::Format::SpawnAtReference(RE::TESObjectREFR* a_ref)
+{
+	if (objects.empty() && objectTypes.empty()) {
+		return;
+	}
+
+	const auto                       base = a_ref->GetBaseObject();
+	const std::vector<Game::Object>* objectsToSpawn = nullptr;
+
+	const auto find_objects = [&](auto&& key) -> std::vector<Game::Object>* {
+		if (auto it = objects.find(key); it != objects.end()) {
+			return &it->second;
+		}
+		return nullptr;
+	};
+
+	if (!objectsToSpawn) {
+		objectsToSpawn = find_objects(a_ref->GetFormID());		
+	}
+
+	if (!objectsToSpawn && base) {
+		objectsToSpawn = find_objects(base->GetFormID());		
+	}
+
+	if (!objectsToSpawn) {
+		objectsToSpawn = find_objects(clib_util::editorID::get_editorID(a_ref));		
+	}
+
+	if (!objectsToSpawn && base) {
+		objectsToSpawn = find_objects(clib_util::editorID::get_editorID(base));		
+	}
+
+	if (!objectsToSpawn && base) {
+		if (const auto it = objectTypes.find(base->GetFormType()); it != objectTypes.end()) {
+			objectsToSpawn = &it->second;
+		}
+	}
+
+	if (!objectsToSpawn) {
+		return;
+	}
+
+	const auto dataHandler = RE::TESDataHandler::GetSingleton();
+	const auto cell = a_ref->GetParentCell();
+	const auto worldSpace = a_ref->GetWorldspace();
+
+	for (const auto& object : *objectsToSpawn) {
+		object.SpawnObject(dataHandler, a_ref, cell, worldSpace, true);
 	}
 }

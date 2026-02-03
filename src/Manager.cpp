@@ -101,105 +101,69 @@ void Manager::OnDataLoad()
 	CleanupSavedFiles();
 }
 
-void Manager::SpawnInCell(RE::TESObjectCELL* a_cell)
-{
-	if (auto it = game.cells.find(a_cell->GetFormEditorID()); it != game.cells.end()) {
-		const auto dataHandler = RE::TESDataHandler::GetSingleton();
-		for (const auto& object : it->second) {
-			object.SpawnObject(dataHandler, nullptr, a_cell, a_cell->worldSpace, false);
-		}
-	}
-}
-
-void Manager::SpawnAtReference(RE::TESObjectREFR* a_ref)
-{
-	if (game.objects.empty()) {
-		return;
-	}
-
-	const auto base = a_ref->GetBaseObject();
-
-	const auto findObject = [&](auto&& key) {
-		return game.objects.find(key);
-	};
-
-	auto it = findObject(a_ref->GetFormID());
-	if (it == game.objects.end() && base) {
-		it = findObject(base->GetFormID());
-	}
-	if (it == game.objects.end()) {
-		it = findObject(clib_util::editorID::get_editorID(a_ref));
-	}
-	if (it == game.objects.end() && base) {
-		it = findObject(clib_util::editorID::get_editorID(base));
-	}
-
-	if (it == game.objects.end()) {
-		return;
-	}
-
-	const auto dataHandler = RE::TESDataHandler::GetSingleton();
-	const auto cell = a_ref->GetParentCell();
-	const auto worldSpace = a_ref->GetWorldspace();
-	for (const auto& object : it->second) {
-		object.SpawnObject(dataHandler, a_ref, cell, worldSpace, true);
-	}
-}
-
 void Manager::ProcessConfigs()
 {
-	for (auto& [attachFormStrs, objectVec] : configs.objects) {
-		if (objectVec.empty()) {
+	auto process_and_merge = [](auto& config_objs, const auto& context, auto& vec) {
+		std::vector<Game::Object> temp;
+		temp.reserve(config_objs.size());
+
+		for (auto& obj : config_objs) {
+			obj.CreateGameObject(temp, context);
+		}
+
+		if (!temp.empty()) {
+			vec.insert(vec.end(),
+				std::make_move_iterator(temp.begin()),
+				std::make_move_iterator(temp.end()));
+		}
+	};
+
+	for (auto& [attachStr, objects] : configs.objects) {
+		if (objects.empty()) {
 			continue;
 		}
 
-		for (auto& object : objectVec) {
-			object.GenerateHash();
+		for (auto& obj : objects) {
+			obj.GenerateHash();
 		}
 
-		auto splitAttachFormStrs = string::split(attachFormStrs, ",");
-
-		for (auto& attachFormStr : splitAttachFormStrs) {
-			const auto attachFormID = RE::GetRawFormID(attachFormStr);
-
-			auto& to = (attachFormID != 0) ?
-			               game.objects[attachFormID] :
-			               game.objects[attachFormStr];
-
-			std::vector<Game::Object> vec;
-			vec.reserve(objectVec.size());
-
-			for (auto& object : objectVec) {
-				object.CreateGameObject(vec, attachFormID);
-			}
-
-			if (!vec.empty()) {
-				to.insert(to.end(), std::make_move_iterator(vec.begin()),
-					std::make_move_iterator(vec.end()));
+		for (const auto& str : string::split(attachStr, ",")) {
+			if (const auto id = RE::GetRawFormID(str); id != 0) {
+				process_and_merge(objects, id, game.objects[id]);
+			} else {
+				process_and_merge(objects, str, game.objects[str]);
 			}
 		}
 	}
 
-	for (auto& [attachForm, objectVec] : configs.cells) {
-		if (objectVec.empty()) {
+	for (auto& [form, objects] : configs.cells) {
+		if (objects.empty()) {
 			continue;
 		}
 
-		const auto attachEDID = RE::GetEditorID(attachForm);
-
-		std::vector<Game::Object> vec;
-		vec.reserve(objectVec.size());
-
-		for (auto& object : objectVec) {
-			object.GenerateHash();
-			object.CreateGameObject(vec, attachEDID);
+		for (auto& obj : objects) {
+			obj.GenerateHash();
 		}
 
-		if (!vec.empty()) {
-			auto& to = game.cells[attachEDID];
-			to.insert(to.end(), std::make_move_iterator(vec.begin()),
-				std::make_move_iterator(vec.end()));
+		const auto edid = RE::GetEditorID(form);
+		process_and_merge(objects, edid, game.cells[edid]);
+	}
+
+	for (auto& [typeStr, objects] : configs.objectTypes) {
+		if (objects.empty()) {
+			continue;
 		}
+
+		const auto formType = RE::StringToFormType(typeStr);
+		if (formType == RE::FormType::None) {
+			continue;
+		}
+
+		for (auto& obj : objects) {
+			obj.GenerateHash();
+		}
+
+		process_and_merge(objects, typeStr, game.objectTypes[formType]);
 	}
 
 	configs.clear();
@@ -207,31 +171,33 @@ void Manager::ProcessConfigs()
 
 void Manager::ProcessConfigObjects()
 {
-	for (const auto& [id, objectVec] : game.cells) {
+	for (const auto& objectVec : game.cells | std::views::values) {
 		for (const auto& object : objectVec) {
 			for (auto& instance : object.instances) {
 				configObjects.emplace(instance.hash, &object);
 			}
 		}
 	}
+
+	// objects/objectTypes have to be rehashed on load
 }
 
 void Manager::PlaceInLoadedArea()
 {
-	bool placeAtReferences = !game.objects.empty();
+	bool placeAtReferences = !game.objects.empty() || !game.objectTypes.empty();
 	bool placeInCells = !game.cells.empty();
 
-	RE::TES::GetSingleton()->ForEachCell([this, placeAtReferences, placeInCells](auto* cell) {
+	RE::TES::GetSingleton()->ForEachCell([&](auto* cell) {
 		if (placeAtReferences) {
 			cell->ForEachReference([this](auto* ref) {
 				if (!ref->IsDynamicForm()) {
-					SpawnAtReference(ref);					
+					game.SpawnAtReference(ref);
 				}
 				return RE::BSContainer::ForEachResult::kContinue;
 			});
 		}
 		if (placeInCells) {
-			SpawnInCell(cell);
+			game.SpawnInCell(cell);
 		}
 	});
 }
@@ -494,7 +460,7 @@ RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESCellFullyLoadedEvent
 		return RE::BSEventNotifyControl::kContinue;
 	}
 
-	SpawnInCell(a_event->cell);
+	game.SpawnInCell(a_event->cell);
 
 	return RE::BSEventNotifyControl::kContinue;
 }
@@ -511,7 +477,7 @@ RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESCellAttachDetachEven
 	}
 
 	if (a_event->attached && !ref->IsDynamicForm()) {
-		SpawnAtReference(ref.get());
+		game.SpawnAtReference(ref.get());
 	} else if (!a_event->attached && ref->IsDynamicForm()) {
 		ClearTempObject(ref.get());
 	}

@@ -47,12 +47,9 @@ private:
 		template <class T>
 		static void add_event_sink()
 		{
-			RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<T>(Manager::GetSingleton());
+			RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<T>(GetSingleton());
 		}
 	};
-
-	void SpawnInCell(RE::TESObjectCELL* a_cell);
-	void SpawnAtReference(RE::TESObjectREFR* a_ref);
 
 	void ProcessConfigs();
 	void ProcessConfigObjects();
