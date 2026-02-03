@@ -25,7 +25,7 @@ namespace Config
 			data);
 	}
 
-	void Object::CreateGameObject(std::vector<Game::Object>& a_objectVec, const std::variant<RE::FormID, std::string_view>& a_attachID) const
+	void Object::CreateGameObject(std::vector<Game::Object>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const
 	{
 		std::vector<RE::FormID> checkedBases;
 		checkedBases.reserve(bases.size());

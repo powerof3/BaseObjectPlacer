@@ -128,8 +128,8 @@ void Manager::ProcessConfigs()
 		}
 
 		for (const auto& str : string::split(attachStr, ",")) {
-			if (const auto id = RE::GetRawFormID(str); id != 0) {
-				process_and_merge(objects, id, game.objects[id]);
+			if (const auto id = RE::GetRawFormID(str)) {
+				process_and_merge(objects, id, game.objects[id.id]);
 			} else {
 				process_and_merge(objects, str, game.objects[str]);
 			}

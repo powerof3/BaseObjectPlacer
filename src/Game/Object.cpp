@@ -14,8 +14,8 @@ Game::ObjectFilter::ObjectFilter(const Config::SharedData& a_data)
 {
 	whiteList.reserve(a_data.whiteList.size());
 	for (const auto& str : a_data.whiteList) {
-		if (const auto formID = RE::GetRawFormID(str, true); formID != 0) {
-			whiteList.emplace_back(formID);
+		if (const auto formID = RE::GetRawFormID(str, true)) {
+			whiteList.emplace_back(formID.id);
 		} else {
 			whiteList.emplace_back(str);
 		}
@@ -23,8 +23,8 @@ Game::ObjectFilter::ObjectFilter(const Config::SharedData& a_data)
 
 	blackList.reserve(a_data.blackList.size());
 	for (const auto& str : a_data.blackList) {
-		if (const auto formID = RE::GetRawFormID(str, true); formID != 0) {
-			blackList.emplace_back(formID);
+		if (const auto formID = RE::GetRawFormID(str, true)) {
+			blackList.emplace_back(formID.id);
 		} else {
 			blackList.emplace_back(str);
 		}
@@ -361,6 +361,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 		return;
 	}
 
+	const auto refID = a_ref ? a_ref->GetFormID() : 0;
 	const auto refPos = a_ref ? a_ref->GetPosition() : RE::NiPoint3();
 	const auto refAngle = a_ref ? a_ref->GetAngle() : RE::NiPoint3();
 	const auto refScale = a_ref ? a_ref->GetScale() : 1.0f;
@@ -374,7 +375,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 	for (auto& instance : instances) {
 		auto hash = instance.hash;
 		if (a_ref) {
-			hash = hash::combine(instance.hash, a_ref->GetLocalFormID(), a_ref->GetFile(0)->fileName);
+			hash = hash::combine(instance.hash, RE::RawFormID(refID));
 			Manager::GetSingleton()->AddConfigObject(hash, this);
 		}
 

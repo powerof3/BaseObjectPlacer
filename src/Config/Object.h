@@ -39,7 +39,7 @@ namespace Config
 	{
 	public:
 		void GenerateHash();
-		void CreateGameObject(std::vector<Game::Object>& a_objectVec, const std::variant<RE::FormID, std::string_view>& a_attachID) const;
+		void CreateGameObject(std::vector<Game::Object>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const;
 
 		// members
 		std::string                       uuid;

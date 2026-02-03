@@ -2,6 +2,31 @@
 
 namespace RE
 {
+	RawFormID::RawFormID(FormID a_formID, std::string_view a_modName) :
+		id(a_formID),
+		localID(a_formID & 0x00FFFFFF),
+		modName(a_modName)
+	{}
+
+	RawFormID::RawFormID(FormID a_formID) :
+		id(a_formID),
+		localID(a_formID & 0x00FFFFFF)
+	{
+		static auto  dataHandler = TESDataHandler::GetSingleton();
+		std::uint8_t modIndex = a_formID >> 24;
+		
+		TESFile*     file = nullptr;
+		if (modIndex == 0xFE) {
+			const std::uint16_t lightIndex = (a_formID >> 12) & 0xFFF;
+			file = const_cast<TESFile*>(dataHandler->LookupLoadedLightModByIndex(lightIndex));
+		} else {
+			file = const_cast<TESFile*>(dataHandler->LookupLoadedModByIndex(modIndex));
+		}
+		if (file) {
+			modName = file->fileName;
+		}
+	}
+
 	TESForm* GetForm(const std::string& a_str)
 	{
 		TESForm* form = nullptr;
@@ -22,26 +47,26 @@ namespace RE
 		return form;
 	}
 
-	FormID GetRawFormID(const std::string& a_str, bool a_checkEDID)
+	RawFormID GetRawFormID(const std::string& a_str, bool a_checkEDID)
 	{
 		if (const auto splitID = string::split(a_str, "~"); splitID.size() == 2) {
 			const auto  formID = string::to_num<FormID>(splitID[0], true);
 			const auto& modName = splitID[1];
 			if (g_mergeMapperInterface) {
 				const auto [mergedModName, mergedFormID] = g_mergeMapperInterface->GetNewFormID(modName.c_str(), formID);
-				return TESDataHandler::GetSingleton()->LookupFormID(mergedFormID, mergedModName);
+				return RawFormID(mergedFormID, mergedModName);
 			}
-			return TESDataHandler::GetSingleton()->LookupFormID(formID, modName);
+			return RawFormID(formID, modName);
 		}
 		if (string::is_only_hex(a_str, true)) {
-			return string::to_num<FormID>(a_str, true);
+			return RawFormID(string::to_num<FormID>(a_str, true));
 		}
 		if (a_checkEDID) {
 			if (const auto form = TESForm::LookupByEditorID(a_str)) {
-				return form->GetFormID();
+				return RawFormID(form->GetFormID());
 			}
 		}
-		return static_cast<FormID>(0);
+		return RawFormID(0);
 	}
 
 	FormID GetFormID(const std::string& a_str)

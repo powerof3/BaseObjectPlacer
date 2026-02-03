@@ -50,6 +50,28 @@ namespace RE
 		GENERATE_HASH(Range, a_val.min, a_val.max)
 	};
 
+	struct RawFormID
+	{
+		RawFormID() = default;
+		explicit RawFormID(FormID a_formID, std::string_view a_modName);
+		explicit RawFormID(FormID a_formID);
+
+		explicit operator bool() const
+		{
+			return id != 0 && localID != 0 && !modName.empty();
+		}
+
+		// members
+		FormID           id{ 0 };
+		FormID           localID{ 0 };
+		std::string_view modName;
+
+	private:
+		GENERATE_HASH(RawFormID,
+			a_val.localID,
+			a_val.modName)
+	};
+
 	// BGSNumericIndex
 	inline bool operator<(const BGSNumericIDIndex& lhs, const BGSNumericIDIndex& rhs)
 	{
@@ -73,7 +95,7 @@ namespace RE
 	}
 
 	TESForm*    GetForm(const std::string& a_str);
-	FormID      GetRawFormID(const std::string& a_str, bool a_checkEDID = false);
+	RawFormID   GetRawFormID(const std::string& a_str, bool a_checkEDID = false);
 	FormID      GetFormID(const std::string& a_str);
 	std::string GetEditorID(const std::string& a_str);
 
