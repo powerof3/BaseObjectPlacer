@@ -60,7 +60,7 @@ namespace Config
 		for (const auto [transformIdx, transformRange] : std::views::enumerate(transforms)) {
 			auto flags = Game::Object::Instance::GetInstanceFlags(transformRange, array);
 
-			std::size_t                   objectHash = hash::combine(rootHash, transformIdx);
+			std::size_t objectHash = hash::combine(rootHash, transformIdx);
 			if (auto arrayTransforms = array.GetTransforms(transformRange, objectHash); arrayTransforms.empty()) {
 				std::uint32_t baseIdx = get_base_idx(objectHash, shouldBeOrdered, transformIdx, false);
 

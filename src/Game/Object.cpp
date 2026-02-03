@@ -456,19 +456,19 @@ void Game::Format::SpawnAtReference(RE::TESObjectREFR* a_ref)
 	};
 
 	if (!objectsToSpawn) {
-		objectsToSpawn = find_objects(a_ref->GetFormID());		
+		objectsToSpawn = find_objects(a_ref->GetFormID());
 	}
 
 	if (!objectsToSpawn && base) {
-		objectsToSpawn = find_objects(base->GetFormID());		
+		objectsToSpawn = find_objects(base->GetFormID());
 	}
 
 	if (!objectsToSpawn) {
-		objectsToSpawn = find_objects(clib_util::editorID::get_editorID(a_ref));		
+		objectsToSpawn = find_objects(clib_util::editorID::get_editorID(a_ref));
 	}
 
 	if (!objectsToSpawn && base) {
-		objectsToSpawn = find_objects(clib_util::editorID::get_editorID(base));		
+		objectsToSpawn = find_objects(clib_util::editorID::get_editorID(base));
 	}
 
 	if (!objectsToSpawn && base) {

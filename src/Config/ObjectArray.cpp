@@ -158,7 +158,7 @@ namespace Config
 		if (randomizeRot || randomizeScale || incrementRot || incrementScale) {
 			RE::NiPoint3 rotStep{};
 			float        scaleStep{};
-			
+
 			if (incrementRot || incrementScale) {
 				const auto count = arrayTransforms.size() - 1;
 				if (incrementRot) {
