@@ -39,8 +39,7 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 			has_error = true;
 			logger::error("\terror:{}", glz::format_error(err, buffer));
 		} else {
-			configs.cells.merge(tmpConfig.cells);
-			configs.objects.merge(tmpConfig.objects);
+			configs.merge(tmpConfig);
 		}
 	}
 

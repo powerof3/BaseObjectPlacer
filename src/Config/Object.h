@@ -54,13 +54,21 @@ namespace Config
 
 	struct Format
 	{
-		std::size_t size() const { return cells.size() + objects.size(); }
-		bool        empty() const { return cells.empty() && objects.empty(); }
+		std::size_t size() const { return cells.size() + objects.size() + objectTypes.size(); }
+		bool        empty() const { return cells.empty() && objects.empty() && objectTypes.empty(); }
 
+		void merge(Format& a_rhs)
+		{
+			cells.merge(a_rhs.cells);
+			objects.merge(a_rhs.objects);
+			objectTypes.merge(a_rhs.objectTypes);
+		}
+		
 		void clear()
 		{
 			cells.clear();
 			objects.clear();
+			objectTypes.clear();
 		}
 
 		// members
