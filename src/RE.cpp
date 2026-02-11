@@ -15,7 +15,7 @@ namespace RE
 		if (a_formID == 0) {
 			return;
 		}
-		
+
 		static auto        dataHandler = TESDataHandler::GetSingleton();
 		const std::uint8_t modIndex = a_formID >> 24;
 

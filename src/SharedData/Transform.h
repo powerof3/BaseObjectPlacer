@@ -53,6 +53,7 @@ namespace RE
 		{}
 
 		bool relative{ false };
+
 	private:
 		GENERATE_HASH(ScaleRange, a_val.min, a_val.max, a_val.relative)
 	};

@@ -63,7 +63,7 @@ namespace Config
 			objects.merge(a_rhs.objects);
 			objectTypes.merge(a_rhs.objectTypes);
 		}
-		
+
 		void clear()
 		{
 			cells.clear();

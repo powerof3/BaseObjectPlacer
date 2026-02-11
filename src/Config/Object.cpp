@@ -32,7 +32,7 @@ namespace Config
 		for (const auto& base : bases) {
 			if (const auto form = RE::GetForm(base)) {
 				if (form->IsBoundObject()) {
-					checkedBases.emplace_back(form->As<RE::TESBoundObject>());					
+					checkedBases.emplace_back(form->As<RE::TESBoundObject>());
 				} else if (const auto list = form->As<RE::BGSListForm>()) {
 					list->ForEachForm([&](auto* listForm) {
 						if (listForm->IsBoundObject()) {
@@ -41,7 +41,6 @@ namespace Config
 						return RE::BSContainer::ForEachResult::kContinue;
 					});
 				}
-
 			}
 		}
 
