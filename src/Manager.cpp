@@ -127,6 +127,9 @@ void Manager::ProcessConfigs()
 		}
 
 		for (const auto& str : string::split(attachStr, ",")) {
+			if (str.empty()) {
+				continue;
+			}
 			if (const auto id = RE::GetRawFormID(str)) {
 				process_and_merge(objects, id, game.objects[id.id]);
 			} else {
@@ -140,11 +143,15 @@ void Manager::ProcessConfigs()
 			continue;
 		}
 
+		const auto edid = RE::GetEditorID(form);
+		if (edid.empty()) {
+			continue;
+		}
+
 		for (auto& obj : objects) {
 			obj.GenerateHash();
 		}
 
-		const auto edid = RE::GetEditorID(form);
 		process_and_merge(objects, edid, game.cells[edid]);
 	}
 

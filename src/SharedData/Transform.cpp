@@ -9,17 +9,17 @@ namespace RE
 
 	NiPoint3 Point3Range::min() const
 	{
-		return NiPoint3(x.min, y.min, z.min);
+		return { x.min, y.min, z.min };
 	}
 
 	NiPoint3 Point3Range::max() const
 	{
-		return NiPoint3(x.max.value_or(x.min), y.max.value_or(y.min), z.max.value_or(z.min));
+		return { x.max.value_or(x.min), y.max.value_or(y.min), z.max.value_or(z.min) };
 	}
 
 	NiPoint3 Point3Range::value(std::size_t seed) const
 	{
-		return NiPoint3(x.value(seed), y.value(seed), z.value(seed));
+		return { x.value(seed), y.value(seed), z.value(seed) };
 	}
 
 	bool BSTransform::operator==(const BSTransform& a_rhs) const

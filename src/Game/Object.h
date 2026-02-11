@@ -23,8 +23,8 @@ namespace Game
 			// members
 			RE::TESObjectREFR*  ref;
 			RE::TESBoundObject* baseObj;
+			RE::TESObjectCELL*  cell;
 			std::string_view    fileName;
-			std::string_view    cellEDID;
 		};
 
 		ObjectFilter() = default;
@@ -51,9 +51,8 @@ namespace Game
 
 		bool IsTemporary() const;
 
+		void SetProperties(RE::TESObjectREFR* a_ref, std::size_t a_hash) const;
 		void SetPropertiesHavok(RE::TESObjectREFR* a_ref, RE::NiAVObject* a_root) const;
-		void SetPropertiesFlags(RE::TESObjectREFR* a_ref) const;
-		void AttachScripts(RE::TESObjectREFR* a_ref) const;
 
 		// members
 		GameExtraData                                     extraData;
@@ -65,6 +64,9 @@ namespace Game
 		float                                             chance{ 1.0f };
 
 	private:
+		void SetPropertiesFlags(RE::TESObjectREFR* a_ref) const;
+		void AttachScripts(RE::TESObjectREFR* a_ref) const;
+
 		template <class U>
 		static void CreateScriptArray(std::string_view scriptName, RE::BSScript::Variable* a_variable, const std::vector<U>& a_val)
 		{
@@ -118,6 +120,22 @@ namespace Game
 	class Object
 	{
 	public:
+		struct RefInfo
+		{
+			explicit RefInfo(const RE::TESObjectREFR* a_ref) :
+				id(a_ref ? a_ref->GetFormID() : 0),
+				position(a_ref ? a_ref->GetPosition() : RE::NiPoint3{}),
+				angle(a_ref ? a_ref->GetAngle() : RE::NiPoint3{}),
+				scale(a_ref ? a_ref->GetScale() : 1.0f)
+			{}
+
+			// members
+			RE::RawFormID id;
+			RE::NiPoint3  position;
+			RE::NiPoint3  angle;
+			float         scale;
+		};
+
 		struct Instance
 		{
 			enum class Flags
@@ -149,13 +167,12 @@ namespace Game
 		Object() = default;
 		explicit Object(const Config::SharedData& a_data);
 
-		void SetProperties(RE::TESObjectREFR* a_ref, std::size_t hash) const;
 		void SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool a_doRayCast) const;
 
 		// members
-		SharedData              data;
-		std::vector<RE::FormID> bases;
-		std::vector<Instance>   instances;
+		SharedData                       data;
+		std::vector<RE::TESBoundObject*> bases;
+		std::vector<Instance>            instances;
 	};
 
 	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::Object>>;

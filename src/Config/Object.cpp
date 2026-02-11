@@ -27,11 +27,21 @@ namespace Config
 
 	void Object::CreateGameObject(std::vector<Game::Object>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const
 	{
-		std::vector<RE::FormID> checkedBases;
+		std::vector<RE::TESBoundObject*> checkedBases;
 		checkedBases.reserve(bases.size());
 		for (const auto& base : bases) {
-			if (auto formID = RE::GetFormID(base); formID != 0) {
-				checkedBases.emplace_back(formID);
+			if (const auto form = RE::GetForm(base)) {
+				if (form->IsBoundObject()) {
+					checkedBases.emplace_back(form->As<RE::TESBoundObject>());					
+				} else if (const auto list = form->As<RE::BGSListForm>()) {
+					list->ForEachForm([&](auto* listForm) {
+						if (listForm->IsBoundObject()) {
+							checkedBases.emplace_back(listForm->As<RE::TESBoundObject>());
+						}
+						return RE::BSContainer::ForEachResult::kContinue;
+					});
+				}
+
 			}
 		}
 

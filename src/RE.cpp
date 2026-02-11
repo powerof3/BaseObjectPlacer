@@ -12,10 +12,14 @@ namespace RE
 		id(a_formID),
 		localID(a_formID & 0x00FFFFFF)
 	{
-		static auto  dataHandler = TESDataHandler::GetSingleton();
-		std::uint8_t modIndex = a_formID >> 24;
+		if (a_formID == 0) {
+			return;
+		}
 		
-		TESFile*     file = nullptr;
+		static auto        dataHandler = TESDataHandler::GetSingleton();
+		const std::uint8_t modIndex = a_formID >> 24;
+
+		TESFile* file = nullptr;
 		if (modIndex == 0xFE) {
 			const std::uint16_t lightIndex = (a_formID >> 12) & 0xFFF;
 			file = const_cast<TESFile*>(dataHandler->LookupLoadedLightModByIndex(lightIndex));
