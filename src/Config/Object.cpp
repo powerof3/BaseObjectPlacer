@@ -48,49 +48,26 @@ namespace Config
 			return;
 		}
 
-		Game::Object gameObject(data);
-
-		const auto        checkedBaseSize = checkedBases.size();
+		Game::Object      gameObject(data);
 		const std::size_t rootHash = hash::combine(baseHash, a_attachID);
 
-		bool shouldBeOrdered = checkedBaseSize == transforms.size();
-
-		const auto get_base_idx = [&](std::size_t a_objectHash, bool a_shouldBeOrdered, std::size_t a_idx, bool a_mixArraySeed) {
-			if (a_shouldBeOrdered) {
-				return static_cast<std::uint32_t>(a_idx);
-			}
-			if (checkedBaseSize > 1) {
-				std::size_t rngSeed = a_mixArraySeed ? hash::combine(a_objectHash, array.seed) : a_objectHash;
-				return static_cast<std::uint32_t>(clib_util::RNG(rngSeed).generate<std::size_t>(0, checkedBaseSize - 1));
-			}
-			return static_cast<std::uint32_t>(0);
-		};
-
-		for (const auto [transformIdx, transformRange] : std::views::enumerate(transforms)) {
-			auto flags = Game::Object::Instance::GetInstanceFlags(transformRange, array);
+		for (auto&& [transformIdx, transformRange] : std::views::enumerate(transforms)) {
+			auto flags = Game::Object::Instance::GetInstanceFlags(data, transformRange, array);
 
 			std::size_t objectHash = hash::combine(rootHash, transformIdx);
 			if (auto arrayTransforms = array.GetTransforms(transformRange, objectHash); arrayTransforms.empty()) {
-				std::uint32_t baseIdx = get_base_idx(objectHash, shouldBeOrdered, transformIdx, false);
-
-				auto instanceHash = hash::combine(objectHash, baseIdx);
-				if (!data.RollChance(instanceHash)) {
+				if (!data.RollChance(objectHash)) {
 					continue;
 				}
-				gameObject.instances.emplace_back(baseIdx, transformRange, flags, instanceHash);
+				gameObject.instances.emplace_back(transformRange, flags, objectHash);
 
 			} else {
-				shouldBeOrdered = checkedBaseSize == arrayTransforms.size();
-
-				for (const auto [arrayIdx, arrayTransform] : std::views::enumerate(arrayTransforms)) {
-					objectHash = hash::combine(rootHash, transformIdx, arrayIdx);
-					std::uint32_t baseIdx = get_base_idx(objectHash, shouldBeOrdered, arrayIdx, true);
-
-					auto instanceHash = hash::combine(objectHash, baseIdx);
-					if (!data.RollChance(instanceHash)) {
+				for (auto&& [arrayIdx, arrayTransform] : std::views::enumerate(arrayTransforms)) {
+					objectHash = hash::combine(rootHash, transformIdx, arrayIdx, array.seed);
+					if (!data.RollChance(objectHash)) {
 						continue;
 					}
-					gameObject.instances.emplace_back(baseIdx, transformRange, arrayTransform, flags, instanceHash);
+					gameObject.instances.emplace_back(transformRange, arrayTransform, flags, objectHash);
 				}
 			}
 		}

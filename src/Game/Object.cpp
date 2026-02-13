@@ -296,25 +296,26 @@ void Game::SharedData::AttachScripts(RE::TESObjectREFR* a_ref) const
 	}
 }
 
-Game::Object::Instance::Instance(std::uint32_t a_baseIndex, const RE::BSTransformRange& a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash) :
-	baseIndex(a_baseIndex),
+Game::Object::Instance::Instance(const RE::BSTransformRange& a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash) :
 	transform(a_transform),
 	transformRange(a_range),
 	flags(a_flags),
 	hash(a_hash)
 {}
 
-Game::Object::Instance::Instance(std::uint32_t a_baseIndex, const RE::BSTransformRange& a_range, Flags a_flags, std::size_t a_hash) :
-	baseIndex(a_baseIndex),
+Game::Object::Instance::Instance(const RE::BSTransformRange& a_range, Flags a_flags, std::size_t a_hash) :
 	transform(a_range, a_hash),
 	transformRange(a_range),
 	flags(a_flags),
 	hash(a_hash)
 {}
 
-Game::Object::Instance::Flags Game::Object::Instance::GetInstanceFlags(const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array)
+Game::Object::Instance::Flags Game::Object::Instance::GetInstanceFlags(const Config::SharedData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array)
 {
 	REX::EnumSet flags(Flags::kNone);
+	if (a_data.flags.any(Data::ReferenceFlags::kSequentialObjects)) {
+		flags.set(Flags::kSequentialObjects);
+	}
 	if (a_range.translate.relative) {
 		flags.set(Flags::kRelativeTranslate);
 	}
@@ -363,12 +364,22 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 
 	const RefInfo refInfo(a_ref);
 
-	for (auto& instance : instances) {
+	const auto baseSize = static_cast<std::uint32_t>(bases.size());
+
+	for (auto&& [idx, instance] : std::views::enumerate(instances)) {
+		auto baseIndex = static_cast<std::uint32_t>(idx % baseSize);
+
 		auto hash = instance.hash;
 		if (a_ref) {
 			hash = hash::combine(instance.hash, refInfo.id);
-			Manager::GetSingleton()->AddConfigObject(hash, this);
 		}
+
+		if (instance.flags.none(Instance::Flags::kSequentialObjects)) {
+			baseIndex = clib_util::RNG(hash).generate<std::uint32_t>(0, baseSize - 1);
+		}
+
+		hash = hash::combine(hash, baseIndex);
+		Manager::GetSingleton()->AddConfigObject(hash, this);
 
 		if (auto id = Manager::GetSingleton()->GetSavedObject(hash); id != 0) {
 			logger::info("\t[{:X}]{:X} already exists, skipping spawn.", hash, id);
@@ -380,7 +391,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 			continue;
 		}
 
-		const auto baseObject = bases[instance.baseIndex];
+		const auto baseObject = bases[baseIndex];
 		auto       transform = instance.GetWorldTransform(refInfo.position, refInfo.angle, hash);
 		/*if (a_doRayCast && (data.motionType.type == RE::hkpMotion::MotionType::kKeyframed || !RE::CanBeMoved(baseObject))) {
 			RE::NiPoint3 halfExtents{
@@ -416,7 +427,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 
 			Manager::GetSingleton()->SerializeObject(hash, createdRef, data.IsTemporary());
 
-			logger::info("\tSpawning new object {:X} with hash {:X}.", createdRef->GetFormID(), hash);
+			logger::info("\tSpawning object with hash {:X} using base index {}.", hash, baseIndex);
 		}
 	}
 }

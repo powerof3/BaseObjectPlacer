@@ -15,7 +15,8 @@ namespace Data
 		kIgnoredBySandbox = 1 << 5,    // Prevents Sandboxing NPCs from using this reference (useful for furniture/idle markers).
 		kIsFullLOD = 1 << 6,           // Reference will not fade from a distance.
 
-		kTemporary = 1 << 14
+		kTemporary = 1 << 14,
+		kSequentialObjects = 1 << 15
 	};
 
 	struct MotionType

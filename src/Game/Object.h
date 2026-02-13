@@ -141,23 +141,23 @@ namespace Game
 			enum class Flags
 			{
 				kNone = 0,
-				kRandomizeRotation = 1 << 0,
-				kRandomizeScale = 1 << 1,
-				kRelativeTranslate = 1 << 2,
-				kRelativeRotate = 1 << 3,
-				kRelativeScale = 1 << 4,
+				kSequentialObjects = 1 << 0,
+				kRandomizeRotation = 1 << 1,
+				kRandomizeScale = 1 << 2,
+				kRelativeTranslate = 1 << 3,
+				kRelativeRotate = 1 << 4,
+				kRelativeScale = 1 << 5,
 			};
 
 			Instance() = default;
-			Instance(std::uint32_t a_baseIndex, const RE::BSTransformRange& a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash);
-			Instance(std::uint32_t a_baseIndex, const RE::BSTransformRange& a_range, Flags a_flags, std::size_t a_hash);
+			Instance(const RE::BSTransformRange& a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash);
+			Instance(const RE::BSTransformRange& a_range, Flags a_flags, std::size_t a_hash);
 
-			static Flags GetInstanceFlags(const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array);
+			static Flags GetInstanceFlags(const Config::SharedData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array);
 
 			RE::BSTransform GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle, std::size_t a_hash) const;
 
 			// members
-			std::uint32_t                      baseIndex{ 0 };
 			RE::BSTransform                    transform;
 			RE::BSTransformRange               transformRange;
 			REX::EnumSet<Flags, std::uint32_t> flags;

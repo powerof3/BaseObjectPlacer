@@ -116,6 +116,9 @@ struct glz::meta<ConfigObject>
 				case "Temporary"_h:
 					s.data.flags.set(Data::ReferenceFlags::kTemporary);
 					break;
+				case "SequentialObjects"_h:
+					s.data.flags.set(Data::ReferenceFlags::kSequentialObjects);
+					break;
 				default:
 					break;
 				}
