@@ -14,9 +14,10 @@ namespace Data
 		kOpenByDefault = 1 << 4,       // For Doors/Containers; begins in the open state.
 		kIgnoredBySandbox = 1 << 5,    // Prevents Sandboxing NPCs from using this reference (useful for furniture/idle markers).
 		kIsFullLOD = 1 << 6,           // Reference will not fade from a distance.
-
+		//user
 		kTemporary = 1 << 14,
-		kSequentialObjects = 1 << 15
+		kSequentialObjects = 1 << 15,
+		kPreventClipping = 1 << 16,
 	};
 
 	struct MotionType

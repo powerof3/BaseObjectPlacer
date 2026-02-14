@@ -126,7 +126,12 @@ bool Game::SharedData::PassesFilters(RE::TESObjectREFR* a_ref, RE::TESObjectCELL
 
 bool Game::SharedData::IsTemporary() const
 {
-	return flags.any(Data::ReferenceFlags::kTemporary) || conditions != nullptr;
+	return flags.any(ReferenceFlags::kTemporary) || conditions != nullptr;
+}
+
+bool Game::SharedData::PreventClipping(const RE::TESBoundObject* a_base) const
+{
+	return flags.any(ReferenceFlags::kPreventClipping) || (motionType.type == RE::hkpMotion::MotionType::kKeyframed || motionType.type == RE::hkpMotion::MotionType::kFixed || !RE::CanBeMoved(a_base));
 }
 
 void Game::SharedData::SetProperties(RE::TESObjectREFR* a_ref, std::size_t a_hash) const
@@ -146,31 +151,31 @@ void Game::SharedData::SetPropertiesHavok([[maybe_unused]] RE::TESObjectREFR* a_
 void Game::SharedData::SetPropertiesFlags(RE::TESObjectREFR* a_ref) const
 {
 	bool changedFlags = false;
-	if (flags.any(Data::ReferenceFlags::kNoAIAcquire)) {
+	if (flags.any(ReferenceFlags::kNoAIAcquire)) {
 		a_ref->formFlags |= RE::TESObjectREFR::RecordFlags::kNoAIAcquire;
 		changedFlags = true;
 	}
-	if (flags.any(Data::ReferenceFlags::kInitiallyDisabled)) {
+	if (flags.any(ReferenceFlags::kInitiallyDisabled)) {
 		a_ref->formFlags |= RE::TESObjectREFR::RecordFlags::kInitiallyDisabled;
 		changedFlags = true;
 	}
-	if (flags.any(Data::ReferenceFlags::kHiddenFromLocalMap)) {
+	if (flags.any(ReferenceFlags::kHiddenFromLocalMap)) {
 		a_ref->SetOnLocalMap(false);
 		changedFlags = true;
 	}
-	if (flags.any(Data::ReferenceFlags::kInaccessible)) {
+	if (flags.any(ReferenceFlags::kInaccessible)) {
 		a_ref->formFlags |= RE::TESObjectREFR::RecordFlags::kInaccessible;
 		changedFlags = true;
 	}
-	if (flags.any(Data::ReferenceFlags::kIgnoredBySandbox)) {
+	if (flags.any(ReferenceFlags::kIgnoredBySandbox)) {
 		a_ref->formFlags |= RE::TESObjectACTI::RecordFlags::kIgnoresObjectInteraction;
 		changedFlags = true;
 	}
-	if (flags.any(Data::ReferenceFlags::kOpenByDefault)) {
+	if (flags.any(ReferenceFlags::kOpenByDefault)) {
 		RE::BGSOpenCloseForm::SetOpenState(a_ref, true, true);
 		a_ref->AddChange(RE::TESObjectREFR::ChangeFlags::kGameOnlyExtra);
 	}
-	if (flags.any(Data::ReferenceFlags::kIsFullLOD)) {
+	if (flags.any(ReferenceFlags::kIsFullLOD)) {
 		a_ref->formFlags |= RE::TESObjectREFR::RecordFlags::kIsFullLOD;
 		changedFlags = true;
 	}
@@ -313,7 +318,7 @@ Game::Object::Instance::Instance(const RE::BSTransformRange& a_range, Flags a_fl
 Game::Object::Instance::Flags Game::Object::Instance::GetInstanceFlags(const Config::SharedData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array)
 {
 	REX::EnumSet flags(Flags::kNone);
-	if (a_data.flags.any(Data::ReferenceFlags::kSequentialObjects)) {
+	if (a_data.flags.any(ReferenceFlags::kSequentialObjects)) {
 		flags.set(Flags::kSequentialObjects);
 	}
 	if (a_range.translate.relative) {
@@ -356,7 +361,7 @@ Game::Object::Object(const Config::SharedData& a_data) :
 	data(a_data)
 {}
 
-void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool) const
+void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool a_preventClipping) const
 {
 	if (!data.PassesFilters(a_ref, a_cell)) {
 		return;
@@ -393,14 +398,14 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 
 		const auto baseObject = bases[baseIndex];
 		auto       transform = instance.GetWorldTransform(refInfo.position, refInfo.angle, hash);
-		/*if (a_doRayCast && (data.motionType.type == RE::hkpMotion::MotionType::kKeyframed || !RE::CanBeMoved(baseObject))) {
+		if (a_preventClipping && data.PreventClipping(baseObject)) {
 			RE::NiPoint3 halfExtents{
 				static_cast<float>(baseObject->boundData.boundMax.x - baseObject->boundData.boundMin.x),
 				static_cast<float>(baseObject->boundData.boundMax.y - baseObject->boundData.boundMin.y),
 				static_cast<float>(baseObject->boundData.boundMax.z - baseObject->boundData.boundMin.z)
 			};
-			transform.translate = RE::ValidateSpawnPosition(a_cell, a_ref, refPos, transform, halfExtents);
-		}*/
+			transform.ValidatePosition(a_cell, a_ref, refInfo.position, refInfo.halfExtents, halfExtents);
+		}
 
 		auto createdRefHandle = a_dataHandler->CreateReferenceAtLocation(
 			baseObject,
@@ -427,7 +432,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 
 			Manager::GetSingleton()->SerializeObject(hash, createdRef, data.IsTemporary());
 
-			logger::info("\tSpawning object with hash {:X} using base index {}.", hash, baseIndex);
+			logger::info("\tSpawning object {:X} with hash {:X}.", createdRef->GetFormID(), hash);
 		}
 	}
 }

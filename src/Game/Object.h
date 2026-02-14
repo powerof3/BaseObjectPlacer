@@ -11,6 +11,8 @@ namespace Config
 
 namespace Game
 {
+	using ReferenceFlags = Data::ReferenceFlags;
+
 	struct ObjectFilter
 	{
 		using FilterEntry = std::variant<RE::FormID, std::string>;
@@ -50,18 +52,19 @@ namespace Game
 		bool PassesFilters(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) const;
 
 		bool IsTemporary() const;
+		bool PreventClipping(const RE::TESBoundObject* a_base) const;
 
 		void SetProperties(RE::TESObjectREFR* a_ref, std::size_t a_hash) const;
 		void SetPropertiesHavok(RE::TESObjectREFR* a_ref, RE::NiAVObject* a_root) const;
 
 		// members
-		GameExtraData                                     extraData;
-		BSScript::GameScripts                             scripts;
-		std::shared_ptr<RE::TESCondition>                 conditions;
-		Data::MotionType                                  motionType;
-		ObjectFilter                                      filter;
-		REX::EnumSet<Data::ReferenceFlags, std::uint32_t> flags;
-		float                                             chance{ 1.0f };
+		GameExtraData                               extraData;
+		BSScript::GameScripts                       scripts;
+		std::shared_ptr<RE::TESCondition>           conditions;
+		Data::MotionType                            motionType;
+		ObjectFilter                                filter;
+		REX::EnumSet<ReferenceFlags, std::uint32_t> flags;
+		float                                       chance{ 1.0f };
 
 	private:
 		void SetPropertiesFlags(RE::TESObjectREFR* a_ref) const;
@@ -126,6 +129,7 @@ namespace Game
 				id(a_ref ? a_ref->GetFormID() : 0),
 				position(a_ref ? a_ref->GetPosition() : RE::NiPoint3{}),
 				angle(a_ref ? a_ref->GetAngle() : RE::NiPoint3{}),
+				halfExtents(a_ref ? a_ref->GetBoundMax() - a_ref->GetBoundMin() : RE::NiPoint3{}),
 				scale(a_ref ? a_ref->GetScale() : 1.0f)
 			{}
 
@@ -133,6 +137,7 @@ namespace Game
 			RE::RawFormID id;
 			RE::NiPoint3  position;
 			RE::NiPoint3  angle;
+			RE::NiPoint3  halfExtents;
 			float         scale;
 		};
 
@@ -167,7 +172,7 @@ namespace Game
 		Object() = default;
 		explicit Object(const Config::SharedData& a_data);
 
-		void SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool a_doRayCast) const;
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool a_preventClipping) const;
 
 		// members
 		SharedData                       data;

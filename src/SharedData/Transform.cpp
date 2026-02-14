@@ -26,4 +26,84 @@ namespace RE
 	{
 		return std::tie(rotate, translate, scale) == std::tie(a_rhs.rotate, a_rhs.translate, a_rhs.scale);
 	}
+
+	void BSTransform::ValidatePosition(RE::TESObjectCELL* a_cell, RE::TESObjectREFR* a_ref, const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refExtents, const RE::NiPoint3& a_spawnExtents)
+	{
+		if (!a_cell) {
+			return;
+		}
+
+		const auto bhkWorld = a_cell->GetbhkWorld();
+		if (!bhkWorld) {
+			return;
+		}
+
+		const static auto worldScale = RE::bhkWorld::GetWorldScale();
+		const NiPoint3    scaledExtents = a_spawnExtents * scale;
+
+		NiPoint3 rayStart = a_refPos;
+		rayStart.z += a_refExtents.z;
+
+		const NiPoint3 rayEnd = translate;
+		const NiPoint3 rayVec = rayEnd - rayStart;
+
+		hkpAllRayHitTempCollector collector;
+		bhkPickData               pick;
+
+		pick.rayInput.from = rayStart * worldScale;
+		pick.rayInput.to = rayEnd * worldScale;
+		pick.rayInput.enableShapeCollectionFilter = false;
+		pick.rayInput.filterInfo.SetCollisionLayer(COL_LAYER::kLOS);
+		pick.allRayHitTempCollector = &collector;
+
+		if (bhkWorld->PickObject(pick)) {
+			float                        minFraction = 1.0f;
+			const hkpWorldRayCastOutput* bestHit = nullptr;
+
+			for (const auto& hit : collector.hits) {
+				if (hit.hitFraction >= minFraction) {
+					continue;
+				}
+
+				if (!hit.rootCollidable) {
+					continue;
+				}
+
+				if (const auto layer = hit.rootCollidable->GetCollisionLayer(); layer == COL_LAYER::kBiped ||
+																				layer == COL_LAYER::kDeadBip ||
+																				layer == COL_LAYER::kClutter ||
+																				layer == COL_LAYER::kProjectile ||
+																				layer == COL_LAYER::kSpell ||
+																				layer == COL_LAYER::kWeapon ||
+																				layer == COL_LAYER::kCloudTrap) {
+					continue;
+				}
+
+				if (auto hitRef = RE::TESHavokUtilities::FindCollidableRef(*hit.rootCollidable); hitRef == a_ref) {
+					continue;
+				}
+
+				minFraction = hit.hitFraction;
+				bestHit = &hit;
+			}
+
+			if (bestHit) {
+				NiPoint3 normal{
+					bestHit->normal.quad.m128_f32[0],
+					bestHit->normal.quad.m128_f32[1],
+					bestHit->normal.quad.m128_f32[2]
+				};
+
+				NiMatrix3 rot(rotate);
+
+				const float projectedDepth =
+					(std::abs(normal.Dot(rot.GetVectorX())) * scaledExtents.x) +
+					(std::abs(normal.Dot(rot.GetVectorY())) * scaledExtents.y) +
+					(std::abs(normal.Dot(rot.GetVectorZ())) * scaledExtents.z);
+
+				const NiPoint3 hitPos = rayStart + (rayVec * minFraction);
+				translate = hitPos + (normal * (projectedDepth + 0.1f));
+			}
+		}
+	}
 }

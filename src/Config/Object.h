@@ -31,7 +31,7 @@ namespace Config
 			a_val.motionType,
 			a_val.whiteList,
 			a_val.blackList,
-			a_val.flags.underlying(),
+			//a_val.flags.underlying(),
 			a_val.chance);
 	};
 
@@ -118,6 +118,9 @@ struct glz::meta<ConfigObject>
 					break;
 				case "SequentialObjects"_h:
 					s.data.flags.set(Data::ReferenceFlags::kSequentialObjects);
+					break;
+				case "PreventClipping"_h:
+					s.data.flags.set(Data::ReferenceFlags::kPreventClipping);
 					break;
 				default:
 					break;

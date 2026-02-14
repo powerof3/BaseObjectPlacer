@@ -90,6 +90,8 @@ namespace RE
 		{}
 
 		bool operator==(const BSTransform& a_rhs) const;
+		void ValidatePosition(RE::TESObjectCELL* a_cell, RE::TESObjectREFR*        a_ref, const RE::NiPoint3& a_refPos,
+			const RE::NiPoint3&                  a_refExtents, const RE::NiPoint3& a_spawnExtents);
 
 		// members
 		NiPoint3 rotate;
