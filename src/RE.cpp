@@ -162,7 +162,7 @@ namespace RE
 	void SplitValue(std::size_t value, float& lowFloat, float& highFloat)
 	{
 		auto low = static_cast<uint32_t>(value);
-		auto high = static_cast<uint32_t>(value >> 32);
+		const auto high = static_cast<uint32_t>(value >> 32);
 
 		lowFloat = std::bit_cast<float>(low);
 		highFloat = std::bit_cast<float>(high);
@@ -170,8 +170,8 @@ namespace RE
 
 	std::size_t RecombineValue(float lowFloat, float highFloat)
 	{
-		auto low = std::bit_cast<std::uint32_t>(lowFloat);
-		auto high = std::bit_cast<std::uint32_t>(highFloat);
+		const auto low = std::bit_cast<std::uint32_t>(lowFloat);
+		const auto high = std::bit_cast<std::uint32_t>(highFloat);
 
 		return (static_cast<std::size_t>(high) << 32) | low;
 	}

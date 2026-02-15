@@ -83,5 +83,6 @@ private:
 	CreatedObjects                            savedObjects;
 	CreatedObjects                            tempObjects;
 	std::optional<std::filesystem::path>      saveDirectory;
+	REL::Version                              minVersion{ 1, 0, 0, 0 };
 	bool                                      loadingSave{ false };
 };

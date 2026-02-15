@@ -39,6 +39,15 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 			has_error = true;
 			logger::error("\terror:{}", glz::format_error(err, buffer));
 		} else {
+			if (tmpConfig.version < minVersion) {
+				has_error = true;
+
+				logger::warn("\tSkipping file: Version mismatch.");
+				logger::warn("\t\tFile:		{}", tmpConfig.version);
+				logger::warn("\t\tRequired: {}", minVersion);
+
+				continue;
+			}
 			configs.merge(tmpConfig);
 		}
 	}
