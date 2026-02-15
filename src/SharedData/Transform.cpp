@@ -22,12 +22,20 @@ namespace RE
 		return { x.value(seed), y.value(seed), z.value(seed) };
 	}
 
+	BoundingBox::BoundingBox(TESObjectREFR* a_ref) :
+		pos(a_ref->GetPosition()),
+		boundMin(a_ref->GetBoundMin()),
+		boundMax(a_ref->GetBoundMax())
+	{
+		extents = boundMax - boundMin;
+	}
+
 	bool BSTransform::operator==(const BSTransform& a_rhs) const
 	{
 		return std::tie(rotate, translate, scale) == std::tie(a_rhs.rotate, a_rhs.translate, a_rhs.scale);
 	}
 
-	void BSTransform::ValidatePosition(RE::TESObjectCELL* a_cell, RE::TESObjectREFR* a_ref, const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refExtents, const RE::NiPoint3& a_spawnExtents)
+	void BSTransform::ValidatePosition(TESObjectCELL* a_cell, TESObjectREFR* a_ref, const BoundingBox& a_refBB, const NiPoint3& a_spawnExtents)
 	{
 		if (!a_cell) {
 			return;
@@ -41,8 +49,8 @@ namespace RE
 		const static auto worldScale = RE::bhkWorld::GetWorldScale();
 		const NiPoint3    scaledExtents = a_spawnExtents * scale;
 
-		NiPoint3 rayStart = a_refPos;
-		rayStart.z += a_refExtents.z;
+		NiPoint3 rayStart = a_refBB.pos;
+		rayStart.z += a_refBB.extents.z;
 
 		const NiPoint3 rayEnd = translate;
 		const NiPoint3 rayVec = rayEnd - rayStart;
@@ -79,7 +87,8 @@ namespace RE
 					continue;
 				}
 
-				if (auto hitRef = RE::TESHavokUtilities::FindCollidableRef(*hit.rootCollidable); hitRef == a_ref) {
+				auto hitRef = TESHavokUtilities::FindCollidableRef(*hit.rootCollidable); 
+				if (hitRef && (hitRef == a_ref || IsInBoundingBox(hitRef->GetPosition(), a_refBB.boundMin, a_refBB.boundMax))) {
 					continue;
 				}
 
@@ -102,7 +111,7 @@ namespace RE
 					(std::abs(normal.Dot(rot.GetVectorZ())) * scaledExtents.z);
 
 				const NiPoint3 hitPos = rayStart + (rayVec * minFraction);
-				translate = hitPos + (normal * (projectedDepth + 0.1f));
+				translate = hitPos + (normal * (projectedDepth + 1.0f));
 			}
 		}
 	}

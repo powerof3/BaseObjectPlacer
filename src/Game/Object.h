@@ -123,22 +123,27 @@ namespace Game
 	class Object
 	{
 	public:
-		struct RefInfo
+		struct Params
 		{
-			explicit RefInfo(const RE::TESObjectREFR* a_ref) :
-				id(a_ref ? a_ref->GetFormID() : 0),
-				position(a_ref ? a_ref->GetPosition() : RE::NiPoint3{}),
-				angle(a_ref ? a_ref->GetAngle() : RE::NiPoint3{}),
-				halfExtents(a_ref ? a_ref->GetBoundMax() - a_ref->GetBoundMin() : RE::NiPoint3{}),
-				scale(a_ref ? a_ref->GetScale() : 1.0f)
-			{}
+			struct RefParams
+			{
+				RefParams() = default;
+				RefParams(RE::TESObjectREFR* a_ref);
+
+				// members
+				RE::RawFormID   id;
+				RE::BoundingBox bb;
+				float           scale;
+			};
+
+			Params(RE::TESObjectREFR* a_ref);
+			Params(RE::TESObjectCELL* a_cell);
 
 			// members
-			RE::RawFormID id;
-			RE::NiPoint3  position;
-			RE::NiPoint3  angle;
-			RE::NiPoint3  halfExtents;
-			float         scale;
+			RefParams          refParams;
+			RE::TESObjectREFR* ref;
+			RE::TESObjectCELL* cell;
+			RE::TESWorldSpace* worldspace;
 		};
 
 		struct Instance
@@ -172,7 +177,7 @@ namespace Game
 		Object() = default;
 		explicit Object(const Config::SharedData& a_data);
 
-		void SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool a_preventClipping) const;
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping) const;
 
 		// members
 		SharedData                       data;
@@ -192,6 +197,9 @@ namespace Game
 			objects.clear();
 			objectTypes.clear();
 		}
+
+		std::vector<Game::Object>* FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base);
+		std::vector<Game::Object>* FindObjects(const RE::TESBoundObject* a_base);
 
 		void SpawnInCell(RE::TESObjectCELL* a_cell);
 		void SpawnAtReference(RE::TESObjectREFR* a_ref);

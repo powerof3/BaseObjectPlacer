@@ -159,9 +159,23 @@ namespace RE
 		wrap_angle(a_angle.z);
 	}
 
+	bool IsInBoundingBox(const NiPoint3& a_pos, const NiPoint3& a_boundMin, const NiPoint3& a_boundMax)
+	{
+		if (a_pos.x < a_boundMin.x || a_pos.x > a_boundMax.x) {
+			return false;
+		}
+		if (a_pos.y < a_boundMin.y || a_pos.y > a_boundMax.y) {
+			return false;
+		}
+		if (a_pos.z < a_boundMin.z || a_pos.z > a_boundMax.z) {
+			return false;
+		}
+		return true;
+	}
+
 	void SplitValue(std::size_t value, float& lowFloat, float& highFloat)
 	{
-		auto low = static_cast<uint32_t>(value);
+		auto       low = static_cast<uint32_t>(value);
 		const auto high = static_cast<uint32_t>(value >> 32);
 
 		lowFloat = std::bit_cast<float>(low);

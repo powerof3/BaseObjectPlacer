@@ -74,6 +74,17 @@ namespace RE
 		GENERATE_HASH(BSTransformRange, a_val.rotate, a_val.translate, a_val.scale)
 	};
 
+	struct BoundingBox
+	{
+		BoundingBox() = default;
+		BoundingBox(TESObjectREFR* a_ref);
+
+		NiPoint3 pos;
+		NiPoint3 boundMin;
+		NiPoint3 boundMax;
+		NiPoint3 extents;
+	};
+
 	class BSTransform
 	{
 	public:
@@ -90,8 +101,8 @@ namespace RE
 		{}
 
 		bool operator==(const BSTransform& a_rhs) const;
-		void ValidatePosition(RE::TESObjectCELL* a_cell, RE::TESObjectREFR* a_ref, const RE::NiPoint3& a_refPos,
-			const RE::NiPoint3& a_refExtents, const RE::NiPoint3& a_spawnExtents);
+		
+		void ValidatePosition(TESObjectCELL* a_cell, TESObjectREFR* a_ref, const BoundingBox& a_refBB, const RE::NiPoint3& a_spawnExtents);
 
 		// members
 		NiPoint3 rotate;

@@ -301,6 +301,25 @@ void Game::SharedData::AttachScripts(RE::TESObjectREFR* a_ref) const
 	}
 }
 
+Game::Object::Params::RefParams::RefParams(RE::TESObjectREFR* a_ref) :
+	id(a_ref->GetFormID()),
+	bb(a_ref),
+	scale(a_ref->GetScale())
+{}
+
+Game::Object::Params::Params(RE::TESObjectREFR* a_ref) :
+	refParams(a_ref),
+	ref(a_ref),
+	cell(a_ref->GetParentCell()),
+	worldspace(a_ref->GetWorldspace())
+{}
+
+Game::Object::Params::Params(RE::TESObjectCELL* a_cell) :
+	ref(nullptr),
+	cell(a_cell),
+	worldspace(a_cell->worldSpace)
+{}
+
 Game::Object::Instance::Instance(const RE::BSTransformRange& a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash) :
 	transform(a_transform),
 	transformRange(a_range),
@@ -361,22 +380,23 @@ Game::Object::Object(const Config::SharedData& a_data) :
 	data(a_data)
 {}
 
-void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell, RE::TESWorldSpace* a_worldSpace, bool a_preventClipping) const
+void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping) const
 {
-	if (!data.PassesFilters(a_ref, a_cell)) {
+	auto [refParams, ref, cell, worldSpace] = a_params;
+
+	if (!data.PassesFilters(ref, cell)) {
 		return;
 	}
 
-	const RefInfo refInfo(a_ref);
-
 	const auto baseSize = static_cast<std::uint32_t>(bases.size());
+	const auto refAngle = ref->GetAngle();
 
 	for (auto&& [idx, instance] : std::views::enumerate(instances)) {
 		auto baseIndex = static_cast<std::uint32_t>(idx % baseSize);
 
 		auto hash = instance.hash;
-		if (a_ref) {
-			hash = hash::combine(instance.hash, refInfo.id);
+		if (ref) {
+			hash = hash::combine(instance.hash, refParams.id);
 		}
 
 		if (instance.flags.none(Instance::Flags::kSequentialObjects)) {
@@ -397,22 +417,22 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 		}
 
 		const auto baseObject = bases[baseIndex];
-		auto       transform = instance.GetWorldTransform(refInfo.position, refInfo.angle, hash);
+		auto       transform = instance.GetWorldTransform(refParams.bb.pos, refAngle, hash);
 		if (a_preventClipping && data.PreventClipping(baseObject)) {
-			RE::NiPoint3 halfExtents{
+			RE::NiPoint3 baseObjectExtents{
 				static_cast<float>(baseObject->boundData.boundMax.x - baseObject->boundData.boundMin.x),
 				static_cast<float>(baseObject->boundData.boundMax.y - baseObject->boundData.boundMin.y),
 				static_cast<float>(baseObject->boundData.boundMax.z - baseObject->boundData.boundMin.z)
 			};
-			transform.ValidatePosition(a_cell, a_ref, refInfo.position, refInfo.halfExtents, halfExtents);
+			transform.ValidatePosition(cell, ref, refParams.bb, baseObjectExtents);
 		}
 
 		auto createdRefHandle = a_dataHandler->CreateReferenceAtLocation(
 			baseObject,
 			transform.translate,
 			transform.rotate,
-			a_cell,
-			a_worldSpace,
+			cell,
+			worldSpace,
 			nullptr,
 			nullptr,
 			{},
@@ -422,7 +442,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 		if (auto createdRef = createdRefHandle.get()) {
 			if (float scale = transform.scale; scale != 1.0f) {
 				if (instance.flags.any(Instance::Flags::kRelativeScale)) {
-					scale *= refInfo.scale;
+					scale *= refParams.scale;
 				}
 				createdRef->SetScale(scale);
 				createdRef->AddChange(RE::TESObjectREFR::ChangeFlags::kScale);
@@ -437,12 +457,42 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, RE::TESObjectR
 	}
 }
 
+std::vector<Game::Object>* Game::Format::FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base)
+{
+	if (const auto it = objects.find(a_ref->GetFormID()); it != objects.end()) {
+		return &it->second;
+	}
+	if (a_base) {
+		if (const auto it = objects.find(a_base->GetFormID()); it != objects.end()) {
+			return &it->second;
+		}
+		if (const auto it = objects.find(clib_util::editorID::get_editorID(a_base)); it != objects.end()) {
+			return &it->second;
+		}
+	}
+	return nullptr;
+}
+
+std::vector<Game::Object>* Game::Format::FindObjects(const RE::TESBoundObject* a_base)
+{
+	if (!a_base) {
+		return nullptr;
+	}
+	
+	if (const auto it = objectTypes.find(a_base->GetFormType()); it != objectTypes.end()) {
+		return &it->second;
+	}
+
+	return nullptr;
+}
+
 void Game::Format::SpawnInCell(RE::TESObjectCELL* a_cell)
 {
 	if (const auto it = cells.find(a_cell->GetFormEditorID()); it != cells.end()) {
-		const auto dataHandler = RE::TESDataHandler::GetSingleton();
+		const auto           dataHandler = RE::TESDataHandler::GetSingleton();
+		const Object::Params objectParams(a_cell);
 		for (const auto& object : it->second) {
-			object.SpawnObject(dataHandler, nullptr, a_cell, a_cell->worldSpace, false);
+			object.SpawnObject(dataHandler, objectParams, false);
 		}
 	}
 }
@@ -453,40 +503,23 @@ void Game::Format::SpawnAtReference(RE::TESObjectREFR* a_ref)
 		return;
 	}
 
-	const auto dataHandler = RE::TESDataHandler::GetSingleton();
-	const auto cell = a_ref->GetParentCell();
-	const auto worldSpace = a_ref->GetWorldspace();
-
 	const auto                       base = a_ref->GetBaseObject();
-	const std::vector<Game::Object>* objectsToSpawn = nullptr;
 
-	const auto find_objects = [&](auto&& key) -> std::vector<Game::Object>* {
-		if (auto it = objects.find(key); it != objects.end()) {
-			return &it->second;
+	auto objectsToSpawn = FindObjects(a_ref, base);
+	auto objectsToSpawnFromTypes = FindObjects(base);
+
+	if (objectsToSpawn || objectsToSpawnFromTypes) {
+		const auto           dataHandler = RE::TESDataHandler::GetSingleton();
+		const Object::Params params(a_ref);
+		if (objectsToSpawn) {
+			for (const auto& object : *objectsToSpawn) {
+				object.SpawnObject(dataHandler, params, true);
+			}
 		}
-		return nullptr;
-	};
-
-	if (!objectsToSpawn) {
-		objectsToSpawn = find_objects(a_ref->GetFormID());
-	}
-
-	if (!objectsToSpawn && base) {
-		objectsToSpawn = find_objects(base->GetFormID());
-		if (!objectsToSpawn) {
-			objectsToSpawn = find_objects(clib_util::editorID::get_editorID(base));
-		}
-	}
-
-	if (objectsToSpawn) {
-		for (const auto& object : *objectsToSpawn) {
-			object.SpawnObject(dataHandler, a_ref, cell, worldSpace, true);
-		}
-	}
-
-	if (const auto it = objectTypes.find(base->GetFormType()); it != objectTypes.end()) {
-		for (const auto& object : it->second) {
-			object.SpawnObject(dataHandler, a_ref, cell, worldSpace, true);
+		if (objectsToSpawnFromTypes) {
+			for (const auto& object : *objectsToSpawnFromTypes) {
+				object.SpawnObject(dataHandler, params, true);
+			}
 		}
 	}
 }

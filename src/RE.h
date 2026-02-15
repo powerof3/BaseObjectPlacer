@@ -110,6 +110,7 @@ namespace RE
 	NiPoint3 ApplyRotation(const NiPoint3& point, const NiPoint3& pivot, const NiMatrix3& rotationMatrix);
 
 	void WrapAngle(NiPoint3& a_angle);
+	bool IsInBoundingBox(const NiPoint3& a_pos, const NiPoint3& a_boundMin, const NiPoint3& a_boundMax);
 
 	void        SplitValue(std::size_t value, float& lowFloat, float& highFloat);
 	std::size_t RecombineValue(float lowFloat, float highFloat);

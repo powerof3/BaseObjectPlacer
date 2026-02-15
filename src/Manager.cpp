@@ -34,8 +34,7 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 	for (auto& path : paths) {
 		logger::info("{} {}...", a_reload ? "Reloading" : "Reading", path.string());
 		Config::Format tmpConfig;
-		auto           err = glz::read_file_json(tmpConfig, path.string(), buffer);
-		if (err) {
+		if (auto err = glz::read_file_json(tmpConfig, path.string(), buffer)) {
 			has_error = true;
 			logger::error("\terror:{}", glz::format_error(err, buffer));
 		} else {
