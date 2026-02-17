@@ -12,10 +12,13 @@ class Manager :
 	public RE::BSTEventSink<RE::TESFormDeleteEvent>
 {
 public:
+	void                  LoadPrefabs();
 	std::pair<bool, bool> ReadConfigs(bool a_reload = false);
 	void                  ReloadConfigs();
 
-	void OnDataLoad();
+	void                  OnDataLoad();
+	
+	const Config::Prefab* GetPrefab(std::string_view a_uuid) const;
 
 	RE::FormID          GetSavedObject(std::size_t a_hash) const;
 	const Game::Object* GetConfigObject(std::size_t a_hash);
@@ -52,7 +55,6 @@ private:
 	};
 
 	void ProcessConfigs();
-	void ProcessConfigObjects();
 	void PlaceInLoadedArea();
 
 	std::optional<std::filesystem::path> GetSaveDirectory();
@@ -79,10 +81,10 @@ private:
 	// members
 	Config::Format                            configs;
 	Game::Format                              game;
+	StringMap<Config::Prefab>                 configPrefabs;
 	NodeMap<std::size_t, const Game::Object*> configObjects;  // [entry hash, ptr to game object inside configs]
 	CreatedObjects                            savedObjects;
 	CreatedObjects                            tempObjects;
 	std::optional<std::filesystem::path>      saveDirectory;
-	REL::Version                              minVersion{ 1, 0, 0, 0 };
 	bool                                      loadingSave{ false };
 };

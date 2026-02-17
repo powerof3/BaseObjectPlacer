@@ -393,6 +393,10 @@ template <>
 struct glz::meta<Extra::ActivateParent<std::string>>
 {
 	using T = Extra::ActivateParent<std::string>;
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key == "reference";
+	}
 	static constexpr auto value = object(
 		"reference", &T::reference,
 		"delay", &T::delay);
@@ -402,6 +406,10 @@ template <>
 struct glz::meta<Extra::ActivateParents<std::string>>
 {
 	using T = Extra::ActivateParents<std::string>;
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key == "parents";
+	}
 	static constexpr auto value = object(
 		"parents", &T::parents,
 		"parentActivateOnly", &T::parentActivateOnly);
@@ -411,6 +419,10 @@ template <>
 struct glz::meta<Extra::EnableStateParent<std::string>>
 {
 	using T = Extra::EnableStateParent<std::string>;
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key == "reference";
+	}
 	static constexpr auto value = object(
 		"reference", &T::reference,
 		"oppositeState", &T::oppositeState,
@@ -421,6 +433,10 @@ template <>
 struct glz::meta<Extra::Teleport<std::string>>
 {
 	using T = Extra::Teleport<std::string>;
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key == "linkedDoor";
+	}
 	static constexpr auto value = object(
 		"linkedDoor", &T::linkedDoor,
 		"position", &T::position,
@@ -431,6 +447,10 @@ template <>
 struct glz::meta<Extra::Lock<std::string>>
 {
 	using T = Extra::Lock<std::string>;
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key == "level";
+	}
 	static constexpr auto value = object(
 		"level", &T::lockLevel,
 		"key", &T::key);
@@ -440,6 +460,10 @@ template <>
 struct glz::meta<Extra::LinkedRef<std::string>>
 {
 	using T = Extra::LinkedRef<std::string>;
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key == "reference";
+	}
 	static constexpr auto value = object(
 		"reference", &T::reference,
 		"keyword", &T::keyword);
@@ -449,6 +473,10 @@ template <>
 struct glz::meta<ConfigExtraData>
 {
 	using T = ConfigExtraData;
+	static constexpr bool requires_key(std::string_view, bool)
+	{
+		return false;
+	}
 	static constexpr auto value = object(
 		"ownership", &T::ownership,
 		"activateParents", &T::activateParents,

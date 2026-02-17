@@ -1,5 +1,36 @@
 #include "Manager.h"
 
+void Manager::LoadPrefabs()
+{
+	std::filesystem::path dir{ R"(Data\BaseObjectPlacer\Prefabs)" };
+
+	std::error_code ec;
+	if (!std::filesystem::exists(dir, ec)) {
+		return;
+	}
+
+	logger::info("{:*^50}", "PREFABS");
+
+	std::string buffer;
+
+	for (auto i = std::filesystem::recursive_directory_iterator(dir); i != std::filesystem::recursive_directory_iterator(); ++i) {
+		if (i->is_directory() || i->path().extension() != ".json"sv) {
+			continue;
+		}
+		Config::PrefabList prefabList;
+		auto               err = glz::read_file_json(prefabList, i->path().string(), buffer);
+		if (err) {
+			logger::error("\terror:{}", glz::format_error(err, buffer));
+		} else {
+			for (auto& prefab : prefabList.prefabs) {
+				configPrefabs.try_emplace(prefab.uuid, prefab);
+			}
+		}
+	}
+
+	logger::info("Loaded {} prefabs", configPrefabs.size());
+}
+
 std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 {
 	logger::info("{:*^50}", a_reload ? "RELOAD" : "CONFIG FILES");
@@ -16,7 +47,8 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 
 	for (auto i = std::filesystem::recursive_directory_iterator(dir); i != std::filesystem::recursive_directory_iterator(); ++i) {
 		if (i->is_directory()) {
-			if (i->path().filename() == "WordPlacement") {
+			const auto& fileName = i->path().filename();
+			if (fileName == "WordPlacement" || fileName == "Prefabs") {
 				i.disable_recursion_pending();
 			}
 			continue;
@@ -34,26 +66,20 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 	for (auto& path : paths) {
 		logger::info("{} {}...", a_reload ? "Reloading" : "Reading", path.string());
 		Config::Format tmpConfig;
-		if (auto err = glz::read_file_json(tmpConfig, path.string(), buffer)) {
+		if (auto err = glz::read_file_json<glz::opts{ .error_on_missing_keys = true }>(tmpConfig, path.string(), buffer)) {
 			has_error = true;
 			logger::error("\terror:{}", glz::format_error(err, buffer));
 		} else {
-			if (tmpConfig.version < minVersion) {
-				has_error = true;
-
-				logger::warn("\tSkipping file: Version mismatch.");
-				logger::warn("\t\tFile:		{}", tmpConfig.version);
-				logger::warn("\t\tRequired: {}", minVersion);
-
-				continue;
-			}
 			configs.merge(tmpConfig);
 		}
 	}
 
 	if (!a_reload) {
 		ConfigObjectArray::Word::InitCharMap();
+	} else {
+		configPrefabs.clear();
 	}
+	LoadPrefabs();
 
 	return { !configs.empty(), has_error };
 }
@@ -69,7 +95,6 @@ void Manager::ReloadConfigs()
 	configObjects.clear();
 
 	ProcessConfigs();
-	ProcessConfigObjects();
 
 	logger::info("{} objects to be placed", configObjects.size());
 	RE::ConsoleLog::GetSingleton()->Print("\t%u objects to be placed", configObjects.size());
@@ -89,9 +114,6 @@ void Manager::OnDataLoad()
 	logger::info("{:*^50}", "RESULTS");
 
 	ProcessConfigs();
-	ProcessConfigObjects();
-
-	logger::info("{} objects to be placed", configObjects.size());
 
 	if (!game.cells.empty()) {
 		detail::add_event_sink<RE::TESCellFullyLoadedEvent>();
@@ -108,10 +130,16 @@ void Manager::OnDataLoad()
 	CleanupSavedFiles();
 }
 
+const Config::Prefab* Manager::GetPrefab(std::string_view a_uuid) const
+{
+	auto it = configPrefabs.find(a_uuid);
+	return it != configPrefabs.end() ? &it->second : nullptr;
+}
+
 void Manager::ProcessConfigs()
 {
 	auto process_and_merge = [](auto& config_objs, const auto& context, auto& vec) {
-		std::vector<Game::Object> temp;
+		std::vector<Game::RootObject> temp;
 		temp.reserve(config_objs.size());
 
 		for (auto& obj : config_objs) {
@@ -181,19 +209,6 @@ void Manager::ProcessConfigs()
 	}
 
 	configs.clear();
-}
-
-void Manager::ProcessConfigObjects()
-{
-	for (const auto& objectVec : game.cells | std::views::values) {
-		for (const auto& object : objectVec) {
-			for (auto& instance : object.instances) {
-				configObjects.emplace(instance.hash, &object);
-			}
-		}
-	}
-
-	// objects/objectTypes have to be rehashed on load
 }
 
 void Manager::PlaceInLoadedArea()

@@ -93,6 +93,10 @@ template <>
 struct glz::meta<BSScript::Script<BSScript::ConfigValue>>
 {
 	using T = BSScript::Script<BSScript::ConfigValue>;
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key == "script";
+	}
 	static constexpr auto value = object(
 		"script", &T::script,
 		"properties", &T::properties,

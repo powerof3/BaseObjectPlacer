@@ -4,7 +4,7 @@ namespace RE
 {
 	struct Point3Range
 	{
-		enum class Convert
+		enum class Convert : std::uint8_t
 		{
 			kNone,
 			kDegToRad,
@@ -101,7 +101,7 @@ namespace RE
 		{}
 
 		bool operator==(const BSTransform& a_rhs) const;
-		
+
 		void ValidatePosition(TESObjectCELL* a_cell, TESObjectREFR* a_ref, const BoundingBox& a_refBB, const RE::NiPoint3& a_spawnExtents);
 
 		// members
@@ -121,6 +121,10 @@ template <>
 struct glz::meta<RE::Point3Range>
 {
 	using T = RE::Point3Range;
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key != "relative";
+	}
 	static constexpr auto value = object(
 		"x", &T::x,
 		"y", &T::y,
@@ -132,6 +136,10 @@ template <>
 struct glz::meta<RE::ScaleRange>
 {
 	using T = RE::ScaleRange;
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key == "min";
+	}
 	static constexpr auto value = object(
 		"min", &T::min,
 		"max", &T::max,
@@ -142,10 +150,14 @@ template <>
 struct glz::meta<RE::BSTransformRange>
 {
 	using T = RE::BSTransformRange;
+	static constexpr bool requires_key(std::string_view, bool)
+	{
+		return false;
+	}
 	static constexpr auto read_rot = [](T& s, const RE::Point3Range& input) {
 		s.rotate = RE::Point3Range(input, RE::Point3Range::Convert::kDegToRad);
 	};
-	static constexpr auto write_rot = [](T& s) {
+	static constexpr auto write_rot = [](const T& s) {
 		return RE::Point3Range(s.rotate, RE::Point3Range::Convert::kRadToDeg);
 	};
 	static constexpr auto value = object(
@@ -158,6 +170,10 @@ template <>
 struct glz::meta<RE::BSTransform>
 {
 	using T = RE::BSTransform;
+	static constexpr bool requires_key(std::string_view, bool)
+	{
+		return false;
+	}
 	static constexpr auto read_rot = [](T& s, const RE::NiPoint3& input) {
 		s.rotate = input * RE::NI_PI / 180;
 	};

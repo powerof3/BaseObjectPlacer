@@ -10,10 +10,10 @@ Game::ObjectFilter::Input::Input(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_
 	fileName(a_ref ? a_ref->GetFile(0)->fileName : ""sv)
 {}
 
-Game::ObjectFilter::ObjectFilter(const Config::SharedData& a_data)
+Game::ObjectFilter::ObjectFilter(const Config::FilterData& a_filter)
 {
-	whiteList.reserve(a_data.whiteList.size());
-	for (const auto& str : a_data.whiteList) {
+	whiteList.reserve(a_filter.whiteList.size());
+	for (const auto& str : a_filter.whiteList) {
 		if (const auto formID = RE::GetRawFormID(str, true)) {
 			whiteList.emplace_back(formID.id);
 		} else {
@@ -21,8 +21,8 @@ Game::ObjectFilter::ObjectFilter(const Config::SharedData& a_data)
 		}
 	}
 
-	blackList.reserve(a_data.blackList.size());
-	for (const auto& str : a_data.blackList) {
+	blackList.reserve(a_filter.blackList.size());
+	for (const auto& str : a_filter.blackList) {
 		if (const auto formID = RE::GetRawFormID(str, true)) {
 			blackList.emplace_back(formID.id);
 		} else {
@@ -95,13 +95,30 @@ bool Game::ObjectFilter::MatchString(const std::string& a_str, const Input& inpu
 	return a_str == input.fileName || a_str == input.cell->GetFormEditorID();
 }
 
-Game::SharedData::SharedData(const Config::SharedData& a_data) :
+Game::FilterData::FilterData(const Config::FilterData& a_filter) :
+	conditions(ConditionParser::BuildCondition(a_filter.conditions)),
+	filter(a_filter)
+{}
+
+bool Game::FilterData::PassesFilters(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) const
+{
+	if (!filter.IsAllowed(a_ref, a_cell)) {
+		return false;
+	}
+
+	if (conditions) {
+		if (auto conditionRef = a_ref ? a_ref : RE::PlayerCharacter::GetSingleton(); !conditions->IsTrue(conditionRef, conditionRef)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+Game::ObjectData::ObjectData(const Config::ObjectData& a_data) :
 	extraData(a_data.extraData),
-	conditions(ConditionParser::BuildCondition(a_data.conditions)),
 	motionType(a_data.motionType),
-	filter(a_data),
-	flags(a_data.flags),
-	chance(a_data.chance)
+	flags(a_data.flags)
 {
 	scripts.reserve(a_data.scripts.size());
 	for (const auto& script : a_data.scripts) {
@@ -109,46 +126,26 @@ Game::SharedData::SharedData(const Config::SharedData& a_data) :
 	}
 }
 
-bool Game::SharedData::PassesFilters(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) const
-{
-	if (conditions) {
-		if (auto conditionRef = a_ref ? a_ref : RE::PlayerCharacter::GetSingleton(); !conditions->IsTrue(conditionRef, conditionRef)) {
-			return false;
-		}
-	}
-
-	if (!filter.IsAllowed(a_ref, a_cell)) {
-		return false;
-	}
-
-	return true;
-}
-
-bool Game::SharedData::IsTemporary() const
-{
-	return flags.any(ReferenceFlags::kTemporary) || conditions != nullptr;
-}
-
-bool Game::SharedData::PreventClipping(const RE::TESBoundObject* a_base) const
+bool Game::ObjectData::PreventClipping(const RE::TESBoundObject* a_base) const
 {
 	return flags.any(ReferenceFlags::kPreventClipping) || (motionType.type == RE::hkpMotion::MotionType::kKeyframed || motionType.type == RE::hkpMotion::MotionType::kFixed || !RE::CanBeMoved(a_base));
 }
 
-void Game::SharedData::SetProperties(RE::TESObjectREFR* a_ref, std::size_t a_hash) const
+void Game::ObjectData::SetProperties(RE::TESObjectREFR* a_ref, std::size_t a_hash) const
 {
 	SetPropertiesFlags(a_ref);
 	AttachScripts(a_ref);
 	extraData.AddExtraData(a_ref, a_hash);
 }
 
-void Game::SharedData::SetPropertiesHavok([[maybe_unused]] RE::TESObjectREFR* a_ref, RE::NiAVObject* a_root) const
+void Game::ObjectData::SetPropertiesHavok([[maybe_unused]] RE::TESObjectREFR* a_ref, RE::NiAVObject* a_root) const
 {
 	if (a_root && motionType.type != RE::hkpMotion::MotionType::kInvalid) {
 		a_root->SetMotionType(motionType.type, true, false, motionType.allowActivate);
 	}
 }
 
-void Game::SharedData::SetPropertiesFlags(RE::TESObjectREFR* a_ref) const
+void Game::ObjectData::SetPropertiesFlags(RE::TESObjectREFR* a_ref) const
 {
 	bool changedFlags = false;
 	if (flags.any(ReferenceFlags::kNoAIAcquire)) {
@@ -184,7 +181,7 @@ void Game::SharedData::SetPropertiesFlags(RE::TESObjectREFR* a_ref) const
 	}
 }
 
-void Game::SharedData::AttachScripts(RE::TESObjectREFR* a_ref) const
+void Game::ObjectData::AttachScripts(RE::TESObjectREFR* a_ref) const
 {
 	if (scripts.empty()) {
 		return;
@@ -334,7 +331,7 @@ Game::Object::Instance::Instance(const RE::BSTransformRange& a_range, Flags a_fl
 	hash(a_hash)
 {}
 
-Game::Object::Instance::Flags Game::Object::Instance::GetInstanceFlags(const Config::SharedData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array)
+REX::EnumSet<Game::Object::Instance::Flags> Game::Object::Instance::GetInstanceFlags(const Config::ObjectData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array)
 {
 	REX::EnumSet flags(Flags::kNone);
 	if (a_data.flags.any(ReferenceFlags::kSequentialObjects)) {
@@ -355,7 +352,7 @@ Game::Object::Instance::Flags Game::Object::Instance::GetInstanceFlags(const Con
 	if (a_array.flags.any(Config::ObjectArray::Flags::kRandomizeScale)) {
 		flags.set(Flags::kRandomizeScale);
 	}
-	return *flags;
+	return flags;
 }
 
 RE::BSTransform Game::Object::Instance::GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle, std::size_t a_hash) const
@@ -376,17 +373,13 @@ RE::BSTransform Game::Object::Instance::GetWorldTransform(const RE::NiPoint3& a_
 	return newTransform;
 }
 
-Game::Object::Object(const Config::SharedData& a_data) :
+Game::Object::Object(const Config::ObjectData& a_data) :
 	data(a_data)
 {}
 
-void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping) const
+void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping, bool a_isTemporary, std::size_t a_parentHash, const std::vector<Object>& a_childObjects) const
 {
 	auto [refParams, ref, cell, worldSpace] = a_params;
-
-	if (!data.PassesFilters(ref, cell)) {
-		return;
-	}
 
 	const auto baseSize = static_cast<std::uint32_t>(bases.size());
 	const auto refAngle = ref->GetAngle();
@@ -396,7 +389,11 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 
 		auto hash = instance.hash;
 		if (ref) {
-			hash = hash::combine(instance.hash, refParams.id);
+			if (a_parentHash != 0 || ref->IsDynamicForm()) {
+				hash = hash::combine(instance.hash, a_parentHash);
+			} else {
+				hash = hash::combine(instance.hash, refParams.id);
+			}
 		}
 
 		if (instance.flags.none(Instance::Flags::kSequentialObjects)) {
@@ -450,14 +447,40 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 
 			data.SetProperties(createdRef.get(), hash);
 
-			Manager::GetSingleton()->SerializeObject(hash, createdRef, data.IsTemporary());
+			Manager::GetSingleton()->SerializeObject(hash, createdRef, a_isTemporary);
 
 			logger::info("\tSpawning object {:X} with hash {:X}.", createdRef->GetFormID(), hash);
+
+			if (!a_childObjects.empty()) {
+				const Params createdParams(createdRef.get());
+				for (const auto& childObject : a_childObjects) {
+					childObject.SpawnObject(a_dataHandler, createdParams, a_preventClipping, a_isTemporary, hash);
+				}
+			}
 		}
 	}
 }
 
-std::vector<Game::Object>* Game::Format::FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base)
+Game::RootObject::RootObject(const Config::FilterData& a_filter, const Config::ObjectData& a_data) :
+	Object(a_data),
+	filter(a_filter)
+{}
+
+bool Game::RootObject::IsTemporary() const
+{
+	return data.flags.any(ReferenceFlags::kTemporary) || filter.conditions != nullptr;
+}
+
+void Game::RootObject::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping) const
+{
+	if (!filter.PassesFilters(a_params.ref, a_params.cell)) {
+		return;
+	}
+
+	Object::SpawnObject(a_dataHandler, a_params, a_preventClipping, IsTemporary(), 0, childObjects);
+}
+
+std::vector<Game::RootObject>* Game::Format::FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base)
 {
 	if (const auto it = objects.find(a_ref->GetFormID()); it != objects.end()) {
 		return &it->second;
@@ -473,12 +496,12 @@ std::vector<Game::Object>* Game::Format::FindObjects(const RE::TESObjectREFR* a_
 	return nullptr;
 }
 
-std::vector<Game::Object>* Game::Format::FindObjects(const RE::TESBoundObject* a_base)
+std::vector<Game::RootObject>* Game::Format::FindObjects(const RE::TESBoundObject* a_base)
 {
 	if (!a_base) {
 		return nullptr;
 	}
-	
+
 	if (const auto it = objectTypes.find(a_base->GetFormType()); it != objectTypes.end()) {
 		return &it->second;
 	}
@@ -503,7 +526,7 @@ void Game::Format::SpawnAtReference(RE::TESObjectREFR* a_ref)
 		return;
 	}
 
-	const auto                       base = a_ref->GetBaseObject();
+	const auto base = a_ref->GetBaseObject();
 
 	auto objectsToSpawn = FindObjects(a_ref, base);
 	auto objectsToSpawnFromTypes = FindObjects(base);

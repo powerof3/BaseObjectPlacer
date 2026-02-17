@@ -102,6 +102,10 @@ template <>
 struct glz::meta<ConfigObjectArray::Grid>
 {
 	using T = ConfigObjectArray::Grid;
+	static constexpr bool requires_key(std::string_view, bool)
+	{
+		return true;
+	}
 	static constexpr auto value = object(
 		"x", &T::xArray,
 		"y", &T::yArray,
@@ -112,13 +116,15 @@ template <>
 struct glz::meta<ConfigObjectArray::Radial>
 {
 	using T = ConfigObjectArray::Radial;
-
+	static constexpr bool requires_key(std::string_view, bool)
+	{
+		return true;
+	}
 	static constexpr auto read_angle = [](ConfigObjectArray::Radial& s, const float input) {
 		s.angle = RE::deg_to_rad(input);
 		s.angleStep = s.angle / static_cast<float>(s.angle == RE::NI_TWO_PI ? s.count : s.count - 1);
 	};
 	static constexpr auto write_angle = [](auto& s) -> auto& { return RE::rad_to_deg(s.angle); };
-
 	static constexpr auto value = object(
 		"count", &T::count,
 		"angle", glz::custom<read_angle, write_angle>,
@@ -129,6 +135,11 @@ template <>
 struct glz::meta<ConfigObjectArray>
 {
 	using T = ConfigObjectArray;
+	
+	static constexpr bool requires_key(std::string_view, bool)
+	{
+		return false;
+	}
 
 	template <class Type>
 	static Type* access(T& s)
@@ -147,7 +158,6 @@ struct glz::meta<ConfigObjectArray>
 		s.rotate.y = RE::deg_to_rad(input.y);
 		s.rotate.z = RE::deg_to_rad(input.z);
 	};
-
 	static constexpr auto read_flags = [](T& s, const std::string& input) {
 		if (!input.empty()) {
 			const auto flagStrs = string::split(input, "|");
@@ -173,7 +183,6 @@ struct glz::meta<ConfigObjectArray>
 		}
 	};
 	static constexpr auto write_flags = [](auto&) -> auto& { return ""; };
-
 	static constexpr auto value = object(
 		"grid", [](T& s) { return access<ConfigObjectArray::Grid>(s); },
 		"radial", [](T& s) { return access<ConfigObjectArray::Radial>(s); },

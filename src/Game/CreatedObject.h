@@ -38,7 +38,10 @@ template <>
 struct glz::meta<CreatedObjects>
 {
 	using T = CreatedObjects;
-
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key == "version";
+	}
 	static constexpr auto read_map = [](T& s, const FlatMap<std::size_t, RE::BGSNumericIDIndex>& input) {
 		s.map.clear();
 		s.map.reserve(input.size());
@@ -47,7 +50,6 @@ struct glz::meta<CreatedObjects>
 		}
 		s.rebuild_inverse_map();
 	};
-
 	static constexpr auto write_map = [](T& s) {
 		FlatMap<std::size_t, RE::BGSNumericIDIndex> output;
 		for (const auto& [hash, formID] : s.map) {
@@ -57,7 +59,6 @@ struct glz::meta<CreatedObjects>
 		}
 		return output;
 	};
-
 	static constexpr auto value = object(
 		"version", &T::version,
 		"objects", glz::custom<read_map, write_map>);

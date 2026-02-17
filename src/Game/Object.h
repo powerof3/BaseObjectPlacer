@@ -6,7 +6,8 @@ namespace Config
 {
 	struct ObjectArray;
 	class Object;
-	struct SharedData;
+	struct FilterData;
+	struct ObjectData;
 }
 
 namespace Game
@@ -30,7 +31,7 @@ namespace Game
 		};
 
 		ObjectFilter() = default;
-		explicit ObjectFilter(const Config::SharedData& a_data);
+		explicit ObjectFilter(const Config::FilterData& a_filter);
 
 		bool IsAllowed(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) const;
 
@@ -44,14 +45,23 @@ namespace Game
 		static bool MatchString(const std::string& a_str, const Input& input);
 	};
 
-	struct SharedData
+	struct FilterData
 	{
-		SharedData() = default;
-		explicit SharedData(const Config::SharedData& a_data);
+		FilterData() = default;
+		explicit FilterData(const Config::FilterData& a_filter);
 
 		bool PassesFilters(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) const;
 
-		bool IsTemporary() const;
+		// members
+		std::shared_ptr<RE::TESCondition> conditions;
+		ObjectFilter                      filter;
+	};
+
+	struct ObjectData
+	{
+		ObjectData() = default;
+		explicit ObjectData(const Config::ObjectData& a_data);
+
 		bool PreventClipping(const RE::TESBoundObject* a_base) const;
 
 		void SetProperties(RE::TESObjectREFR* a_ref, std::size_t a_hash) const;
@@ -60,11 +70,8 @@ namespace Game
 		// members
 		GameExtraData                               extraData;
 		BSScript::GameScripts                       scripts;
-		std::shared_ptr<RE::TESCondition>           conditions;
 		Data::MotionType                            motionType;
-		ObjectFilter                                filter;
 		REX::EnumSet<ReferenceFlags, std::uint32_t> flags;
-		float                                       chance{ 1.0f };
 
 	private:
 		void SetPropertiesFlags(RE::TESObjectREFR* a_ref) const;
@@ -163,7 +170,7 @@ namespace Game
 			Instance(const RE::BSTransformRange& a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash);
 			Instance(const RE::BSTransformRange& a_range, Flags a_flags, std::size_t a_hash);
 
-			static Flags GetInstanceFlags(const Config::SharedData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array);
+			static REX::EnumSet<Flags> GetInstanceFlags(const Config::ObjectData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array);
 
 			RE::BSTransform GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle, std::size_t a_hash) const;
 
@@ -175,19 +182,34 @@ namespace Game
 		};
 
 		Object() = default;
-		explicit Object(const Config::SharedData& a_data);
+		explicit Object(const Config::ObjectData& a_data);
 
-		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping) const;
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping, bool a_isTemporary, std::size_t a_parentHash, const std::vector<Object>& a_childObjects = {}) const;
 
 		// members
-		SharedData                       data;
+		ObjectData                       data;
 		std::vector<RE::TESBoundObject*> bases;
 		std::vector<Instance>            instances;
 	};
 
-	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::Object>>;
-	using EditorIDObjectMap = StringMap<std::vector<Game::Object>>;
-	using FormTypeObjectMap = FlatMap<RE::FormType, std::vector<Game::Object>>;
+	class RootObject : public Object
+	{
+	public:
+		RootObject() = default;
+		explicit RootObject(const Config::FilterData& a_filter, const Config::ObjectData& a_data);
+
+		bool IsTemporary() const;
+
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping) const;
+
+		// members
+		FilterData          filter;
+		std::vector<Object> childObjects;
+	};
+
+	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::RootObject>>;
+	using EditorIDObjectMap = StringMap<std::vector<Game::RootObject>>;
+	using FormTypeObjectMap = FlatMap<RE::FormType, std::vector<Game::RootObject>>;
 
 	struct Format
 	{
@@ -198,8 +220,8 @@ namespace Game
 			objectTypes.clear();
 		}
 
-		std::vector<Game::Object>* FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base);
-		std::vector<Game::Object>* FindObjects(const RE::TESBoundObject* a_base);
+		std::vector<Game::RootObject>* FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base);
+		std::vector<Game::RootObject>* FindObjects(const RE::TESBoundObject* a_base);
 
 		void SpawnInCell(RE::TESObjectCELL* a_cell);
 		void SpawnAtReference(RE::TESObjectREFR* a_ref);

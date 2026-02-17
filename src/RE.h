@@ -122,6 +122,10 @@ template <class T>
 struct glz::meta<RE::Range<T>>
 {
 	using U = RE::Range<T>;
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key == "min";
+	}
 	static constexpr auto value = object(
 		"min", &U::min,
 		"max", &U::max);
@@ -176,6 +180,10 @@ template <>
 struct glz::meta<RE::NiTransform>
 {
 	using T = RE::NiTransform;
+	static constexpr bool requires_key(std::string_view, bool)
+	{
+		return false;
+	}
 	static constexpr auto value = object(
 		"translation", &T::translate,
 		"rotation", &T::rotate,
