@@ -126,6 +126,28 @@ Game::ObjectData::ObjectData(const Config::ObjectData& a_data) :
 	}
 }
 
+void Game::ObjectData::Merge(const Game::ObjectData& a_parent)
+{
+	if (flags.none(Data::ReferenceFlags::kInheritFromParent)) {
+		return;
+	}
+
+	flags = a_parent.flags;
+	
+	extraData.Merge(a_parent.extraData);
+
+	if (motionType.type == RE::hkpMotion::MotionType::kInvalid) {
+		motionType = a_parent.motionType;
+	}
+
+	if (scripts.empty() && !a_parent.scripts.empty()) {
+		scripts.reserve(a_parent.scripts.size());
+		for (const auto& script : a_parent.scripts) {
+			scripts.emplace_back(script);
+		}
+	}
+}
+
 bool Game::ObjectData::PreventClipping(const RE::TESBoundObject* a_base) const
 {
 	return flags.any(ReferenceFlags::kPreventClipping) || (motionType.type == RE::hkpMotion::MotionType::kKeyframed || motionType.type == RE::hkpMotion::MotionType::kFixed || !RE::CanBeMoved(a_base));
@@ -331,7 +353,7 @@ Game::Object::Instance::Instance(const RE::BSTransformRange& a_range, Flags a_fl
 	hash(a_hash)
 {}
 
-REX::EnumSet<Game::Object::Instance::Flags> Game::Object::Instance::GetInstanceFlags(const Config::ObjectData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array)
+REX::EnumSet<Game::Object::Instance::Flags> Game::Object::Instance::GetInstanceFlags(const Game::ObjectData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array)
 {
 	REX::EnumSet flags(Flags::kNone);
 	if (a_data.flags.any(ReferenceFlags::kSequentialObjects)) {

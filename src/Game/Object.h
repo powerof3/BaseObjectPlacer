@@ -62,6 +62,8 @@ namespace Game
 		ObjectData() = default;
 		explicit ObjectData(const Config::ObjectData& a_data);
 
+		void Merge(const Game::ObjectData& a_parent);
+
 		bool PreventClipping(const RE::TESBoundObject* a_base) const;
 
 		void SetProperties(RE::TESObjectREFR* a_ref, std::size_t a_hash) const;
@@ -170,7 +172,7 @@ namespace Game
 			Instance(const RE::BSTransformRange& a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash);
 			Instance(const RE::BSTransformRange& a_range, Flags a_flags, std::size_t a_hash);
 
-			static REX::EnumSet<Flags> GetInstanceFlags(const Config::ObjectData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array);
+			static REX::EnumSet<Flags> GetInstanceFlags(const Game::ObjectData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array);
 
 			RE::BSTransform GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle, std::size_t a_hash) const;
 

@@ -70,7 +70,7 @@ namespace Config
 
 		auto checkedBases = resolvedPrefab->GetBases();
 		if (checkedBases.empty()) {
-			logger::warn("\t[FAIL] No valid 'baseObject' forms resolved.", resolvedPrefab->uuid);
+			logger::warn("\t[FAIL] No valid 'baseObject' forms resolved.");
 			return;
 		}
 
@@ -78,7 +78,7 @@ namespace Config
 		const std::size_t rootHash = hash::combine(baseHash, a_attachID, *resolvedPrefab);
 
 		for (auto&& [transformIdx, transformRange] : std::views::enumerate(transforms)) {
-			auto flags = ObjectInstance::GetInstanceFlags(resolvedPrefab->data, transformRange, array);
+			auto flags = ObjectInstance::GetInstanceFlags(rootObject.data, transformRange, array);
 
 			std::size_t objectHash = hash::combine(rootHash, transformIdx);
 			if (auto arrayTransforms = array.GetTransforms(transformRange, objectHash); arrayTransforms.empty()) {
@@ -100,9 +100,9 @@ namespace Config
 
 		if (rootObject.instances.empty()) {
 			if (transforms.empty()) {
-				logger::warn("\t[FAIL] No instances generated (zero transforms)", resolvedPrefab->uuid);
+				logger::warn("\t[FAIL] No instances generated (zero transforms)");
 			} else {
-				logger::warn("\t[FAIL] No instances generated.", resolvedPrefab->uuid);
+				logger::warn("\t[FAIL] No instances generated.");
 			}
 			return;
 		}
@@ -120,9 +120,10 @@ namespace Config
 				const std::size_t childHash = hash::combine(rootHash, child);
 
 				Game::Object childObject(child.data);
+				childObject.data.Merge(rootObject.data);
 				childObject.bases = std::move(childBases);
 
-				auto childFlags = ObjectInstance::GetInstanceFlags(child.data, child.transform, array);
+				auto childFlags = ObjectInstance::GetInstanceFlags(childObject.data, child.transform, array);
 				childFlags.set(ObjectInstance::Flags::kRelativeTranslate);
 				childFlags.set(ObjectInstance::Flags::kRelativeRotate);
 

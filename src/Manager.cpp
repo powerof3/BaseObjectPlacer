@@ -18,17 +18,16 @@ void Manager::LoadPrefabs()
 			continue;
 		}
 		Config::PrefabList prefabList;
-		auto               err = glz::read_file_json(prefabList, i->path().string(), buffer);
-		if (err) {
+		if (auto err = glz::read_file_json<glz::opts{ .error_on_missing_keys = true }>(prefabList, i->path().string(), buffer)) {
 			logger::error("\terror:{}", glz::format_error(err, buffer));
 		} else {
 			for (auto& prefab : prefabList.prefabs) {
 				configPrefabs.try_emplace(prefab.uuid, prefab);
 			}
 		}
-	}
 
-	logger::info("Loaded {} prefabs", configPrefabs.size());
+		logger::info("Loaded {} prefabs", configPrefabs.size());
+	}
 }
 
 std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
