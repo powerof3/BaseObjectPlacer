@@ -49,7 +49,7 @@ namespace Extra
 			delay(other.delay)
 		{}
 
-		bool empty() const { return reference == 0; } 
+		bool empty() const { return reference == 0; }
 
 		T     reference{};
 		float delay{ 0.0f };
@@ -123,7 +123,7 @@ namespace Extra
 			popIn(other.popIn)
 		{}
 
-		bool empty() const { return reference == 0; } 
+		bool empty() const { return reference == 0; }
 
 		void AddExtraData(RE::TESObjectREFR* a_ref) const
 			requires std::is_same_v<RE::FormID, T>
@@ -175,7 +175,7 @@ namespace Extra
 			keyword(RE::GetFormID(other.keyword))
 		{}
 
-		bool empty() const { return reference == 0; } 
+		bool empty() const { return reference == 0; }
 
 		void AddExtraData(RE::TESObjectREFR* a_ref) const
 			requires std::is_same_v<RE::FormID, T>
@@ -218,7 +218,7 @@ namespace Extra
 			key(RE::GetFormID(other.key))
 		{}
 
-		bool empty() const { return lockLevel == RE::LOCK_LEVEL::kUnlocked && key == 0; } 
+		bool empty() const { return lockLevel == RE::LOCK_LEVEL::kUnlocked && key == 0; }
 
 		void AddExtraData(RE::TESObjectREFR* a_ref) const
 			requires std::is_same_v<RE::FormID, T>
@@ -261,7 +261,7 @@ namespace Extra
 			rotation(other.rotation)
 		{}
 
-		bool empty() const { return linkedDoor == 0; } 
+		bool empty() const { return linkedDoor == 0; }
 
 		void AddExtraData(RE::TESObjectREFR* a_ref) const
 			requires std::is_same_v<RE::FormID, T>

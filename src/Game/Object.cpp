@@ -133,7 +133,7 @@ void Game::ObjectData::Merge(const Game::ObjectData& a_parent)
 	}
 
 	flags = a_parent.flags;
-	
+
 	extraData.Merge(a_parent.extraData);
 
 	if (motionType.type == RE::hkpMotion::MotionType::kInvalid) {
