@@ -16,8 +16,8 @@ public:
 	std::pair<bool, bool> ReadConfigs(bool a_reload = false);
 	void                  ReloadConfigs();
 
-	void                  OnDataLoad();
-	
+	void OnDataLoad();
+
 	const Config::Prefab* GetPrefab(std::string_view a_uuid) const;
 
 	RE::FormID          GetSavedObject(std::size_t a_hash) const;

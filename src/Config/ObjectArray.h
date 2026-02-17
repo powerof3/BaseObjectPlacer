@@ -135,7 +135,7 @@ template <>
 struct glz::meta<ConfigObjectArray>
 {
 	using T = ConfigObjectArray;
-	
+
 	static constexpr bool requires_key(std::string_view, bool)
 	{
 		return false;

@@ -48,7 +48,7 @@ namespace Config
 	void Object::CreateGameObject(std::vector<Game::RootObject>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const
 	{
 		using ObjectInstance = Game::Object::Instance;
-		
+
 		const Prefab* resolvedPrefab = nullptr;
 		std::visit(overload{
 					   [&](const Prefab& a_prefab) {

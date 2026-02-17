@@ -87,7 +87,7 @@ namespace RE
 					continue;
 				}
 
-				auto hitRef = TESHavokUtilities::FindCollidableRef(*hit.rootCollidable); 
+				auto hitRef = TESHavokUtilities::FindCollidableRef(*hit.rootCollidable);
 				if (hitRef && (hitRef == a_ref || IsInBoundingBox(hitRef->GetPosition(), a_refBB.boundMin, a_refBB.boundMax))) {
 					continue;
 				}
