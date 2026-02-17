@@ -22,11 +22,11 @@ void Manager::LoadPrefabs()
 			logger::error("\terror:{}", glz::format_error(err, buffer));
 		} else {
 			for (auto& prefab : prefabList.prefabs) {
-				configPrefabs.try_emplace(prefab.uuid, prefab);
+				cachedPrefabs.try_emplace(prefab.uuid, prefab);
 			}
 		}
 
-		logger::info("Loaded {} prefabs", configPrefabs.size());
+		logger::info("Loaded {} prefabs", cachedPrefabs.size());
 	}
 }
 
@@ -76,7 +76,7 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 	if (!a_reload) {
 		ConfigObjectArray::Word::InitCharMap();
 	} else {
-		configPrefabs.clear();
+		cachedPrefabs.clear();
 	}
 	LoadPrefabs();
 
@@ -93,6 +93,7 @@ void Manager::ReloadConfigs()
 	game.clear();
 	configObjects.clear();
 
+	ResolvePrefabs();
 	ProcessConfigs();
 
 	logger::info("{} objects to be placed", configObjects.size());
@@ -112,6 +113,7 @@ void Manager::OnDataLoad()
 
 	logger::info("{:*^50}", "RESULTS");
 
+	ResolvePrefabs();
 	ProcessConfigs();
 
 	if (!game.cells.empty()) {
@@ -129,10 +131,20 @@ void Manager::OnDataLoad()
 	CleanupSavedFiles();
 }
 
+void Manager::ResolvePrefabs()
+{
+	for (auto& [uuid, prefab] : cachedPrefabs) {
+		prefab.ResolveBasesOnLoad();
+		for (auto& child : prefab.children) {
+			child.ResolveBasesOnLoad();
+		}
+	}
+}
+
 const Config::Prefab* Manager::GetPrefab(std::string_view a_uuid) const
 {
-	auto it = configPrefabs.find(a_uuid);
-	return it != configPrefabs.end() ? &it->second : nullptr;
+	auto it = cachedPrefabs.find(a_uuid);
+	return it != cachedPrefabs.end() ? &it->second : nullptr;
 }
 
 void Manager::ProcessConfigs()
@@ -208,6 +220,7 @@ void Manager::ProcessConfigs()
 	}
 
 	configs.clear();
+	cachedPrefabs.clear();
 }
 
 void Manager::PlaceInLoadedArea()

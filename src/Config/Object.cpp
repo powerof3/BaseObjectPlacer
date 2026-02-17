@@ -16,7 +16,12 @@ namespace Config
 		return true;
 	}
 
-	std::vector<RE::TESBoundObject*> PrefabObject::GetBases() const
+	const std::vector<RE::TESBoundObject*>& PrefabObject::GetBases() const
+	{
+		return resolvedBases;
+	}
+
+	std::vector<RE::TESBoundObject*> PrefabObject::GetBasesOnDemand() const
 	{
 		std::vector<RE::TESBoundObject*> checkedBases;
 		checkedBases.reserve(bases.size());
@@ -37,6 +42,11 @@ namespace Config
 		return checkedBases;
 	}
 
+	void PrefabObject::ResolveBasesOnLoad()
+	{
+		resolvedBases = GetBasesOnDemand();
+	}
+
 	void Object::GenerateHash()
 	{
 		baseHash = hash::combine(
@@ -49,30 +59,30 @@ namespace Config
 	{
 		using ObjectInstance = Game::Object::Instance;
 
-		const Prefab* resolvedPrefab = nullptr;
+		const Prefab*                    resolvedPrefab = nullptr;
+		std::vector<RE::TESBoundObject*> resolvedBases;
+		bool                             cachedPrefab = false;
+
 		std::visit(overload{
 					   [&](const Prefab& a_prefab) {
 						   resolvedPrefab = &a_prefab;
+						   resolvedBases = resolvedPrefab->GetBasesOnDemand();
 					   },
 					   [&](const std::string& str) {
 						   resolvedPrefab = Manager::GetSingleton()->GetPrefab(str);
 						   if (!resolvedPrefab) {
 							   logger::info("Prefab {} not found, skipping object.", str);
 						   }
+						   resolvedBases = resolvedPrefab->GetBases();
+						   cachedPrefab = true;
 					   } },
 			prefab);
 
-		if (!resolvedPrefab) {
+		if (!resolvedPrefab || resolvedBases.empty()) {
 			return;
 		}
 
 		logger::info("Processing object with prefab {}", resolvedPrefab->uuid);
-
-		auto checkedBases = resolvedPrefab->GetBases();
-		if (checkedBases.empty()) {
-			logger::warn("\t[FAIL] No valid 'baseObject' forms resolved.");
-			return;
-		}
 
 		Game::RootObject  rootObject(filter, resolvedPrefab->data);
 		const std::size_t rootHash = hash::combine(baseHash, a_attachID, *resolvedPrefab);
@@ -107,13 +117,13 @@ namespace Config
 			return;
 		}
 
-		logger::info("\tGenerated {} instances with {} bases.", rootObject.instances.size(), checkedBases.size());
+		logger::info("\tGenerated {} instances with {} bases.", rootObject.instances.size(), resolvedBases.size());
 
 		if (!resolvedPrefab->children.empty()) {
 			std::vector<Game::Object> childObjects;
 			childObjects.reserve(resolvedPrefab->children.size());
 			for (const auto& child : resolvedPrefab->children) {
-				auto childBases = child.GetBases();
+				auto childBases = cachedPrefab ? child.GetBases() : child.GetBasesOnDemand();
 				if (childBases.empty()) {
 					continue;
 				}
@@ -134,7 +144,7 @@ namespace Config
 			rootObject.childObjects = std::move(childObjects);
 		}
 
-		rootObject.bases = std::move(checkedBases);
+		rootObject.bases = std::move(resolvedBases);
 		a_objectVec.push_back(std::move(rootObject));
 	}
 }

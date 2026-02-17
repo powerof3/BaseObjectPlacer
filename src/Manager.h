@@ -18,6 +18,7 @@ public:
 
 	void OnDataLoad();
 
+	void                  ResolvePrefabs();
 	const Config::Prefab* GetPrefab(std::string_view a_uuid) const;
 
 	RE::FormID          GetSavedObject(std::size_t a_hash) const;
@@ -81,7 +82,7 @@ private:
 	// members
 	Config::Format                            configs;
 	Game::Format                              game;
-	StringMap<Config::Prefab>                 configPrefabs;
+	StringMap<Config::Prefab>                 cachedPrefabs;
 	NodeMap<std::size_t, const Game::Object*> configObjects;  // [entry hash, ptr to game object inside configs]
 	CreatedObjects                            savedObjects;
 	CreatedObjects                            tempObjects;

@@ -48,11 +48,14 @@ namespace Config
 
 	struct PrefabObject
 	{
-		std::vector<RE::TESBoundObject*> GetBases() const;
+		const std::vector<RE::TESBoundObject*>& GetBases() const;
+		std::vector<RE::TESBoundObject*>        GetBasesOnDemand() const;
+		void                                    ResolveBasesOnLoad();
 
-		std::vector<std::string> bases;
-		RE::BSTransformRange     transform;  // local
-		ObjectData               data;
+		std::vector<std::string>         bases;
+		std::vector<RE::TESBoundObject*> resolvedBases;
+		RE::BSTransformRange             transform;  // local
+		ObjectData                       data;
 
 	private:
 		GENERATE_HASH(PrefabObject, a_val.bases, a_val.transform, a_val.data);
