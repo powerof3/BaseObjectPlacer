@@ -42,7 +42,7 @@ namespace RE
 			return range;
 		}
 
-		// memebrs
+		// members
 		T                min{};
 		std::optional<T> max{};
 

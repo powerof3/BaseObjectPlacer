@@ -32,10 +32,15 @@ namespace Config
 
 	struct ObjectData
 	{
-		ConfigExtraData                                   extraData;
-		BSScript::ConfigScripts                           scripts;
-		Data::MotionType                                  motionType;
-		REX::EnumSet<Data::ReferenceFlags, std::uint32_t> flags;
+		using ReferenceFlags = Data::ReferenceFlags;
+
+		void        ReadReferenceFlags(const std::string& input);
+		std::string WriteReferenceFlags() const;
+
+		ConfigExtraData                             extraData;
+		BSScript::ConfigScripts                     scripts;
+		Data::MotionType                            motionType;
+		REX::EnumSet<ReferenceFlags, std::uint32_t> flags;
 
 	private:
 		GENERATE_HASH(ObjectData,
@@ -52,6 +57,7 @@ namespace Config
 		std::vector<RE::TESBoundObject*>        GetBasesOnDemand() const;
 		void                                    ResolveBasesOnLoad();
 
+		// members
 		std::vector<std::string>         bases;
 		std::vector<RE::TESBoundObject*> resolvedBases;
 		RE::BSTransformRange             transform;  // local
@@ -155,48 +161,11 @@ struct glz::meta<Config::PrefabObject>
 		return a_key == "baseObjects";
 	}
 	static constexpr auto read_flags = [](T& s, const std::string& input) {
-		if (!input.empty()) {
-			const auto flagStrs = string::split(input, "|");
-
-			for (const auto& flagStr : flagStrs) {
-				switch (string::const_hash(flagStr)) {
-				case "NoAIAcquire"_h:
-					s.data.flags.set(Data::ReferenceFlags::kNoAIAcquire);
-					break;
-				case "InitiallyDisabled"_h:
-					s.data.flags.set(Data::ReferenceFlags::kInitiallyDisabled);
-					break;
-				case "HiddenFromLocalMap"_h:
-					s.data.flags.set(Data::ReferenceFlags::kHiddenFromLocalMap);
-					break;
-				case "Inaccessible"_h:
-					s.data.flags.set(Data::ReferenceFlags::kInaccessible);
-					break;
-				case "OpenByDefault"_h:
-					s.data.flags.set(Data::ReferenceFlags::kOpenByDefault);
-					break;
-				case "IgnoredBySandbox"_h:
-					s.data.flags.set(Data::ReferenceFlags::kIgnoredBySandbox);
-					break;
-				case "IsFullLOD"_h:
-					s.data.flags.set(Data::ReferenceFlags::kIsFullLOD);
-					break;
-				case "Temporary"_h:
-					s.data.flags.set(Data::ReferenceFlags::kTemporary);
-					break;
-				case "SequentialObjects"_h:
-					s.data.flags.set(Data::ReferenceFlags::kSequentialObjects);
-					break;
-				case "PreventClipping"_h:
-					s.data.flags.set(Data::ReferenceFlags::kPreventClipping);
-					break;
-				default:
-					break;
-				}
-			}
-		}
+		s.data.ReadReferenceFlags(input);
 	};
-	static constexpr auto write_flags = [](auto&) -> auto& { return ""; };
+	static constexpr auto write_flags = [](auto& s) -> auto& {
+		return s.data.WriteReferenceFlags();
+	};
 	static constexpr auto value = object(
 		"baseObjects", &T::bases,
 		"transform", &T::transform,
@@ -215,48 +184,11 @@ struct glz::meta<Config::Prefab>
 		return a_key == "uniqueID" || a_key == "baseObjects";
 	}
 	static constexpr auto read_flags = [](T& s, const std::string& input) {
-		if (!input.empty()) {
-			const auto flagStrs = string::split(input, "|");
-
-			for (const auto& flagStr : flagStrs) {
-				switch (string::const_hash(flagStr)) {
-				case "NoAIAcquire"_h:
-					s.data.flags.set(Data::ReferenceFlags::kNoAIAcquire);
-					break;
-				case "InitiallyDisabled"_h:
-					s.data.flags.set(Data::ReferenceFlags::kInitiallyDisabled);
-					break;
-				case "HiddenFromLocalMap"_h:
-					s.data.flags.set(Data::ReferenceFlags::kHiddenFromLocalMap);
-					break;
-				case "Inaccessible"_h:
-					s.data.flags.set(Data::ReferenceFlags::kInaccessible);
-					break;
-				case "OpenByDefault"_h:
-					s.data.flags.set(Data::ReferenceFlags::kOpenByDefault);
-					break;
-				case "IgnoredBySandbox"_h:
-					s.data.flags.set(Data::ReferenceFlags::kIgnoredBySandbox);
-					break;
-				case "IsFullLOD"_h:
-					s.data.flags.set(Data::ReferenceFlags::kIsFullLOD);
-					break;
-				case "Temporary"_h:
-					s.data.flags.set(Data::ReferenceFlags::kTemporary);
-					break;
-				case "SequentialObjects"_h:
-					s.data.flags.set(Data::ReferenceFlags::kSequentialObjects);
-					break;
-				case "PreventClipping"_h:
-					s.data.flags.set(Data::ReferenceFlags::kPreventClipping);
-					break;
-				default:
-					break;
-				}
-			}
-		}
+		s.data.ReadReferenceFlags(input);
 	};
-	static constexpr auto write_flags = [](auto&) -> auto& { return ""; };
+	static constexpr auto write_flags = [](auto& s) -> auto& {
+		return s.data.WriteReferenceFlags();
+	};
 	static constexpr auto value = object(
 		"uniqueID", &T::uuid,
 		"baseObjects", &T::bases,
