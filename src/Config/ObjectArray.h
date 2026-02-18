@@ -73,6 +73,9 @@ namespace Config
 			Radial,
 			Word>;
 
+		void ReadFlags(const std::string& input);
+		std::string WriteFlags() const;
+
 		static RE::NiPoint3          GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count);
 		std::vector<RE::BSTransform> GetTransforms(const RE::BSTransformRange& a_pivotRange, std::size_t a_hash) const;
 
@@ -154,30 +157,11 @@ struct glz::meta<ConfigObjectArray>
 		s.rotate.z = RE::deg_to_rad(input.z);
 	};
 	static constexpr auto read_flags = [](T& s, const std::string& input) {
-		if (!input.empty()) {
-			const auto flagStrs = string::split(input, "|");
-
-			for (const auto& flagStr : flagStrs) {
-				switch (string::const_hash(flagStr)) {
-				case "RandomizeRotation"_h:
-					s.flags.set(T::Flags::kRandomizeRotation);
-					break;
-				case "RandomizeScale"_h:
-					s.flags.set(T::Flags::kRandomizeScale);
-					break;
-				case "IncrementRotation"_h:
-					s.flags.set(T::Flags::kIncrementRotation);
-					break;
-				case "IncrementScale"_h:
-					s.flags.set(T::Flags::kIncrementScale);
-					break;
-				default:
-					break;
-				}
-			}
-		}
+		s.ReadFlags(input);
 	};
-	static constexpr auto write_flags = [](auto&) -> auto& { return ""; };
+	static constexpr auto write_flags = [](auto& s) -> std::string {
+		return s.WriteFlags();
+	};
 	static constexpr auto value = object(
 		"grid", [](T& s) { return access<ConfigObjectArray::Grid>(s); },
 		"radial", [](T& s) { return access<ConfigObjectArray::Radial>(s); },

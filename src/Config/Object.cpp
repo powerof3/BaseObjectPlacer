@@ -148,9 +148,10 @@ namespace Config
 						   resolvedPrefab = Manager::GetSingleton()->GetPrefab(str);
 						   if (!resolvedPrefab) {
 							   logger::info("Prefab {} not found, skipping object.", str);
+						   } else {
+							   resolvedBases = resolvedPrefab->GetBases();
+							   cachedPrefab = true;
 						   }
-						   resolvedBases = resolvedPrefab->GetBases();
-						   cachedPrefab = true;
 					   } },
 			prefab);
 

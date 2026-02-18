@@ -71,7 +71,7 @@ namespace Config
 
 		for (char letter : word) {
 			if (letter == '\n') {
-				transform.translate += a_pivot.translate + verticalSpacing * static_cast<float>(newLine);
+				transform.translate = a_pivot.translate + verticalSpacing * static_cast<float>(newLine);
 				newLine++;
 				continue;
 			}
@@ -112,6 +112,52 @@ namespace Config
 				logger::error("\tchar error:{}", glz::format_error(err, buffer));
 			}
 		}
+	}
+
+	void ObjectArray::ReadFlags(const std::string& input) {
+		if (!input.empty()) {
+			const auto flagStrs = string::split(input, "|");
+			for (const auto& flagStr : flagStrs) {
+				switch (string::const_hash(flagStr)) {
+				case "RandomizeRotation"_h:
+					flags.set(Flags::kRandomizeRotation);
+					break;
+				case "RandomizeScale"_h:
+					flags.set(Flags::kRandomizeScale);
+					break;
+				case "IncrementRotation"_h:
+					flags.set(Flags::kIncrementRotation);
+					break;
+				case "IncrementScale"_h:
+					flags.set(Flags::kIncrementScale);
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+
+	std::string ObjectArray::WriteFlags() const {
+		static constexpr std::pair<Flags, std::string_view> flagNames[] = {
+			{ Flags::kRandomizeRotation, "RandomizeRotation" },
+			{ Flags::kRandomizeScale, "RandomizeScale" },
+			{ Flags::kIncrementRotation, "IncrementRotation" },
+			{ Flags::kIncrementScale, "IncrementScale" }
+		};
+
+		std::string result;
+
+		for (const auto& [flag, name] : flagNames) {
+			if (flags.any(flag)) {
+				if (!result.empty()) {
+					result += '|';
+				}
+				result += name;
+			}
+		}
+
+		return result;
 	}
 
 	RE::NiPoint3 ObjectArray::GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count)

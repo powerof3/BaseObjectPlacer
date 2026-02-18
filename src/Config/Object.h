@@ -46,8 +46,8 @@ namespace Config
 		GENERATE_HASH(ObjectData,
 			a_val.extraData,
 			a_val.scripts,
-			a_val.motionType
-			//a_val.flags.underlying()
+			a_val.motionType,
+			a_val.flags.underlying()
 		);
 	};
 
@@ -163,7 +163,7 @@ struct glz::meta<Config::PrefabObject>
 	static constexpr auto read_flags = [](T& s, const std::string& input) {
 		s.data.ReadReferenceFlags(input);
 	};
-	static constexpr auto write_flags = [](auto& s) -> auto& {
+	static constexpr auto write_flags = [](auto& s) -> std::string {
 		return s.data.WriteReferenceFlags();
 	};
 	static constexpr auto value = object(
@@ -186,7 +186,7 @@ struct glz::meta<Config::Prefab>
 	static constexpr auto read_flags = [](T& s, const std::string& input) {
 		s.data.ReadReferenceFlags(input);
 	};
-	static constexpr auto write_flags = [](auto& s) -> auto& {
+	static constexpr auto write_flags = [](auto& s) -> std::string {
 		return s.data.WriteReferenceFlags();
 	};
 	static constexpr auto value = object(

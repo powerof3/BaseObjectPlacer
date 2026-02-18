@@ -25,9 +25,9 @@ void Manager::LoadPrefabs()
 				cachedPrefabs.try_emplace(prefab.uuid, prefab);
 			}
 		}
-
-		logger::info("Loaded {} prefabs", cachedPrefabs.size());
 	}
+	
+	logger::info("Loaded {} prefabs", cachedPrefabs.size());
 }
 
 std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
@@ -290,7 +290,7 @@ void Manager::SaveFiles(std::string_view a_save)
 	logger::info("\t{} saved objects", savedObjects.size());
 
 	std::string buffer;
-	auto        ec = glz::write_file_json(savedObjects, jsonPath->string(), buffer);
+	auto        ec = glz::write_file_json<glz::opts{ .minified = true }>(savedObjects, jsonPath->string(), buffer);
 
 	if (ec) {
 		logger::info("\tFailed to save file: (error: {})", glz::format_error(ec, buffer));
@@ -316,7 +316,7 @@ void Manager::LoadFiles(std::string_view a_save)
 	std::error_code err;
 	if (std::filesystem::exists(*jsonPath, err)) {
 		std::string buffer;
-		auto        ec = glz::read_file_json<glz::opts{ .minified = true }>(savedObjects, jsonPath->string(), buffer);
+		auto        ec = glz::read_file_json(savedObjects, jsonPath->string(), buffer);
 		if (ec) {
 			logger::info("\tFailed to read json (error: {})", glz::format_error(ec, buffer));
 		}

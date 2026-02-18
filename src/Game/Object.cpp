@@ -69,7 +69,7 @@ bool Game::ObjectFilter::CheckList(const std::vector<FilterEntry>& a_list, const
 
 bool Game::ObjectFilter::MatchFormID(RE::FormID a_id, const Input& input)
 {
-	if (input.ref && input.ref->GetFormID() == a_id || input.baseObj && input.baseObj->GetFormID() == a_id || input.cell->GetFormID() == a_id) {
+	if (input.ref && input.ref->GetFormID() == a_id || input.baseObj && input.baseObj->GetFormID() == a_id || input.cell && input.cell->GetFormID() == a_id) {
 		return true;
 	}
 
@@ -92,7 +92,7 @@ bool Game::ObjectFilter::MatchFormID(RE::FormID a_id, const Input& input)
 
 bool Game::ObjectFilter::MatchString(const std::string& a_str, const Input& input)
 {
-	return a_str == input.fileName || a_str == input.cell->GetFormEditorID();
+	return a_str == input.fileName || input.cell && a_str == input.cell->GetFormEditorID();
 }
 
 Game::FilterData::FilterData(const Config::FilterData& a_filter) :
