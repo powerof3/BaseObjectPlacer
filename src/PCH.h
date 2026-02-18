@@ -20,6 +20,8 @@
 #include <boost/unordered/unordered_flat_set.hpp>
 #include <boost/unordered/unordered_node_map.hpp>
 #include <glaze/glaze.hpp>
+#include <glaze/toml.hpp>
+#include <glaze/yaml.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <srell.hpp>
 #include <xbyak/xbyak.h>

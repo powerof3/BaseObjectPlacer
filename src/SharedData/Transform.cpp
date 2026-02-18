@@ -14,12 +14,20 @@ namespace RE
 
 	NiPoint3 Point3Range::max() const
 	{
-		return { x.max.value_or(x.min), y.max.value_or(y.min), z.max.value_or(z.min) };
+		return {
+			x.max == NI_INFINITY ? x.min : x.max,
+			y.max == NI_INFINITY ? y.min : y.max,
+			z.max == NI_INFINITY ? z.min : z.max
+		};
 	}
 
 	NiPoint3 Point3Range::value(std::size_t seed) const
 	{
-		return { x.value(seed), y.value(seed), z.value(seed) };
+		return {
+			x.value(hash::combine(seed, 0)),
+			y.value(hash::combine(seed, 1)),
+			z.value(hash::combine(seed, 2))
+		};
 	}
 
 	BoundingBox::BoundingBox(TESObjectREFR* a_ref) :

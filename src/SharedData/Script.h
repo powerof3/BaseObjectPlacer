@@ -34,7 +34,8 @@ namespace BSScript
 		Script() = default;
 		Script(const Script<T>& other) :
 			script(other.script),
-			properties(other.properties)
+			properties(other.properties),
+			autoFillProperties(other.autoFillProperties)
 		{}
 
 		explicit Script(const Script<ConfigValue>& a_config)

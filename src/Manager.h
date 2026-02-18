@@ -22,7 +22,7 @@ public:
 	const Config::Prefab* GetPrefab(std::string_view a_uuid) const;
 
 	RE::FormID          GetSavedObject(std::size_t a_hash) const;
-	const Game::Object* GetConfigObject(std::size_t a_hash);
+	const Game::Object* GetConfigObject(std::size_t a_hash) const;
 	void                AddConfigObject(std::size_t a_hash, const Game::Object* gameObject);
 
 	void LoadFiles(std::string_view a_save);

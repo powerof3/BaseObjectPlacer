@@ -42,6 +42,13 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 		return { false, true };
 	}
 
+	if (a_reload) {
+		configs.clear();
+		cachedPrefabs.clear();
+	} else {
+		ConfigObjectArray::Word::InitCharMap();
+	}
+
 	std::vector<std::filesystem::path> paths;
 
 	for (auto i = std::filesystem::recursive_directory_iterator(dir); i != std::filesystem::recursive_directory_iterator(); ++i) {
@@ -52,20 +59,37 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 			}
 			continue;
 		}
-		if (i->path().extension() == ".json"sv) {
+		const auto& extension = i->path().extension();
+		if (extension == ".json"sv || extension == ".toml"sv || extension == ".yaml") {
 			paths.push_back(i->path());
 		}
 	}
 
 	std::ranges::sort(paths);
 
-	bool        has_error = false;
-	std::string buffer;
+	bool                has_error = false;
+	std::string         buffer;
+	constexpr glz::opts opts{
+		.error_on_missing_keys = true
+	};
 
 	for (auto& path : paths) {
 		logger::info("{} {}...", a_reload ? "Reloading" : "Reading", path.string());
+
 		Config::Format tmpConfig;
-		if (auto err = glz::read_file_json<glz::opts{ .error_on_missing_keys = true }>(tmpConfig, path.string(), buffer)) {
+
+		glz::error_ctx err{};
+
+		const auto& extension = path.extension();
+		if (extension == ".json") {
+			err = glz::read_file_json<opts>(tmpConfig, path.string(), buffer);
+		} else if (extension == ".toml") {
+			//err = glz::read_file_toml(tmpConfig, path.string(), buffer);
+		} else if (extension == ".yaml") {
+			//err = glz::read_file_yaml<opts>(tmpConfig, path.string());
+		}
+
+		if (err) {
 			has_error = true;
 			logger::error("\terror:{}", glz::format_error(err, buffer));
 		} else {
@@ -73,11 +97,6 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 		}
 	}
 
-	if (!a_reload) {
-		ConfigObjectArray::Word::InitCharMap();
-	} else {
-		cachedPrefabs.clear();
-	}
 	LoadPrefabs();
 
 	return { !configs.empty(), has_error };
@@ -152,11 +171,9 @@ void Manager::ProcessConfigs()
 	auto process_and_merge = [](auto& config_objs, const auto& context, auto& vec) {
 		std::vector<Game::RootObject> temp;
 		temp.reserve(config_objs.size());
-
 		for (auto& obj : config_objs) {
 			obj.CreateGameObject(temp, context);
 		}
-
 		if (!temp.empty()) {
 			vec.insert(vec.end(),
 				std::make_move_iterator(temp.begin()),
@@ -316,7 +333,7 @@ void Manager::LoadFiles(std::string_view a_save)
 	std::error_code err;
 	if (std::filesystem::exists(*jsonPath, err)) {
 		std::string buffer;
-		auto        ec = glz::read_file_json(savedObjects, jsonPath->string(), buffer);
+		auto        ec = glz::read_file_json<glz::opts{ .minified = true }>(savedObjects, jsonPath->string(), buffer);
 		if (ec) {
 			logger::info("\tFailed to read json (error: {})", glz::format_error(ec, buffer));
 		}
@@ -455,14 +472,14 @@ void Manager::FinishLoadSerializedObject(RE::TESObjectREFR* a_ref)
 			shouldDeleteRef = true;
 		} else if (savedID != curID) {
 			logger::error("\t\tObject {:X} - saved ID and current ID mismatch. Deleting saved object. [Expected: ({:X}), Found: ({:X})]",
-				a_ref->GetFormID(), curID, savedID);
+				a_ref->GetFormID(), savedID, curID);
 			shouldDeleteRef = true;
 		}
 
 		if (shouldDeleteRef) {
 			RE::GarbageCollector::GetSingleton()->Add(a_ref, true);
 		} else {
-			if (auto object = GetConfigObject(hash)) {
+			if (const auto object = GetConfigObject(hash)) {
 				object->data.SetPropertiesHavok(a_ref, a_ref->Get3D());
 			}
 		}
@@ -484,7 +501,7 @@ RE::FormID Manager::GetSavedObject(std::size_t a_hash) const
 	return tempObjects.find(a_hash);
 }
 
-const Game::Object* Manager::GetConfigObject(std::size_t a_hash)
+const Game::Object* Manager::GetConfigObject(std::size_t a_hash) const
 {
 	auto it = configObjects.find(a_hash);
 	return it != configObjects.end() ? it->second : nullptr;
@@ -501,7 +518,9 @@ RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESCellFullyLoadedEvent
 		return RE::BSEventNotifyControl::kContinue;
 	}
 
-	game.SpawnInCell(a_event->cell);
+	SKSE::GetTaskInterface()->AddTask([this, cell = a_event->cell]() {
+		game.SpawnInCell(cell);
+	});
 
 	return RE::BSEventNotifyControl::kContinue;
 }
@@ -512,16 +531,22 @@ RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESCellAttachDetachEven
 		return RE::BSEventNotifyControl::kContinue;
 	}
 
-	auto& ref = a_event->reference;
-	if (!ref) {
+	auto& refr = a_event->reference;
+	if (!refr) {
 		return RE::BSEventNotifyControl::kContinue;
 	}
 
-	if (a_event->attached && !ref->IsDynamicForm()) {
-		game.SpawnAtReference(ref.get());
-	} else if (!a_event->attached && ref->IsDynamicForm()) {
-		ClearTempObject(ref.get());
-	}
+	SKSE::GetTaskInterface()->AddTask([this, ref = refr, attached = a_event->attached]() {
+		if (attached) {
+			if (!ref->IsDynamicForm()) {
+				game.SpawnAtReference(ref.get());
+			}
+		} else {
+			if (ref->IsDynamicForm()) {
+				ClearTempObject(ref.get());
+			}
+		}
+	});
 
 	return RE::BSEventNotifyControl::kContinue;
 }
@@ -534,9 +559,10 @@ RE::BSEventNotifyControl Manager::ProcessEvent(const RE::TESLoadGameEvent* a_eve
 
 	logger::info("Finished loading save game");
 
-	PlaceInLoadedArea();
-
-	loadingSave = false;
+	SKSE::GetTaskInterface()->AddTask([this]() {
+		PlaceInLoadedArea();
+		loadingSave = false;
+	});
 
 	return RE::BSEventNotifyControl::kContinue;
 }

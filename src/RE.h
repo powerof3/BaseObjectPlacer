@@ -16,8 +16,8 @@ namespace RE
 
 		[[nodiscard]] T value(std::size_t seed) const
 		{
-			return (!max || min == *max) ? min :
-			                               clib_util::RNG(seed).generate<T>(min, *max);
+			return (max == std::numeric_limits<T>::max() || min == max) ? min :
+			                               clib_util::RNG(seed).generate<T>(min, max);
 		}
 
 		[[nodiscard]] Range deg_to_rad() const
@@ -25,8 +25,8 @@ namespace RE
 		{
 			Range range;
 			range.min = RE::deg_to_rad(min);
-			if (max) {
-				range.max = RE::deg_to_rad(*max);
+			if (max != std::numeric_limits<T>::max()) {
+				range.max = RE::deg_to_rad(max);
 			}
 			return range;
 		}
@@ -36,15 +36,15 @@ namespace RE
 		{
 			Range range;
 			range.min = RE::rad_to_deg(min);
-			if (max) {
-				range.max = RE::rad_to_deg(*max);
+			if (max != std::numeric_limits<T>::max()) {
+				range.max = RE::rad_to_deg(max);
 			}
 			return range;
 		}
 
 		// members
-		T                min{};
-		std::optional<T> max{};
+		T min{};
+		T max{ std::numeric_limits<T>::max() };
 
 	private:
 		GENERATE_HASH(Range, a_val.min, a_val.max)

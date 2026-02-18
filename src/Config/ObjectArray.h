@@ -156,6 +156,13 @@ struct glz::meta<ConfigObjectArray>
 		s.rotate.y = RE::deg_to_rad(input.y);
 		s.rotate.z = RE::deg_to_rad(input.z);
 	};
+	static constexpr auto write_rot = [](T& s) {
+		return RE::NiPoint3{
+			RE::rad_to_deg(s.rotate.x),
+			RE::rad_to_deg(s.rotate.y),
+			RE::rad_to_deg(s.rotate.z)
+		};
+	};
 	static constexpr auto read_flags = [](T& s, const std::string& input) {
 		s.ReadFlags(input);
 	};
@@ -168,5 +175,5 @@ struct glz::meta<ConfigObjectArray>
 		"words", [](T& s) { return access<ConfigObjectArray::Word>(s); },
 		"seed", &T::seed,
 		"flags", glz::custom<read_flags, write_flags>,
-		"rotate", glz::custom<read_rot, &T::rotate>);
+		"rotate", glz::custom<read_rot, write_rot>);
 };

@@ -213,7 +213,7 @@ namespace Config
 					rotStep = GetRotationStep(a_pivotRange, count);
 				}
 				if (incrementScale) {
-					scaleStep = a_pivotRange.scale.max ? ((a_pivotRange.scale.max.value() - a_pivotRange.scale.min) / static_cast<float>(count)) : 0.0f;
+					scaleStep = a_pivotRange.scale.max != RE::NI_INFINITY ? ((a_pivotRange.scale.max - a_pivotRange.scale.min) / static_cast<float>(count)) : 0.0f;
 				}
 			}
 
