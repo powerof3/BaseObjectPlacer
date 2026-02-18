@@ -52,11 +52,6 @@ namespace Config
 
 		struct Word
 		{
-			struct Letter
-			{
-				std::vector<RE::NiPoint3> path;
-			};
-
 			static void InitCharMap();
 
 			void GetTransforms(const RE::BSTransform& a_pivot, std::vector<RE::BSTransform>& a_transforms) const;

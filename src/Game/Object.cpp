@@ -399,7 +399,7 @@ Game::Object::Object(const Config::ObjectData& a_data) :
 	data(a_data)
 {}
 
-void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping, bool a_isTemporary, std::size_t a_parentHash, const std::vector<Object>& a_childObjects) const
+void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles, bool a_isTemporary, std::size_t a_parentHash, const std::vector<Object>& a_childObjects) const
 {
 	auto [refParams, ref, cell, worldSpace] = a_params;
 
@@ -430,14 +430,16 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 			continue;
 		}
 
-		if (RE::GetNumReferenceHandles() >= 1000000 || RE::GetMaxFormIDReached()) {  // max id reached
+		if (a_numHandles >= 1000000 || RE::GetMaxFormIDReached()) {  // max id reached
 			logger::info("\t[{:X}] Maximum number of handles/FF formIDs reached. Skipping.", hash);
 			continue;
 		}
 
+		a_numHandles++;
+
 		const auto baseObject = bases[baseIndex];
 		auto       transform = instance.GetWorldTransform(refParams.bb.pos, refAngle, hash);
-		if (a_preventClipping && data.PreventClipping(baseObject)) {
+		if (ref && data.PreventClipping(baseObject)) {
 			RE::NiPoint3 baseObjectExtents{
 				static_cast<float>(baseObject->boundData.boundMax.x - baseObject->boundData.boundMin.x),
 				static_cast<float>(baseObject->boundData.boundMax.y - baseObject->boundData.boundMin.y),
@@ -476,7 +478,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 			if (!a_childObjects.empty()) {
 				const Params createdParams(createdRef.get());
 				for (const auto& childObject : a_childObjects) {
-					childObject.SpawnObject(a_dataHandler, createdParams, a_preventClipping, a_isTemporary, hash);
+					childObject.SpawnObject(a_dataHandler, createdParams, a_numHandles, a_isTemporary, hash);
 				}
 			}
 		}
@@ -493,13 +495,13 @@ bool Game::RootObject::IsTemporary() const
 	return data.flags.any(ReferenceFlags::kTemporary) || filter.conditions != nullptr;
 }
 
-void Game::RootObject::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping) const
+void Game::RootObject::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles) const
 {
 	if (!filter.PassesFilters(a_params.ref, a_params.cell)) {
 		return;
 	}
 
-	Object::SpawnObject(a_dataHandler, a_params, a_preventClipping, IsTemporary(), 0, childObjects);
+	Object::SpawnObject(a_dataHandler, a_params, a_numHandles, IsTemporary(), 0, childObjects);
 }
 
 std::vector<Game::RootObject>* Game::Format::FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base)
@@ -536,8 +538,9 @@ void Game::Format::SpawnInCell(RE::TESObjectCELL* a_cell)
 	if (const auto it = cells.find(a_cell->GetFormEditorID()); it != cells.end()) {
 		const auto           dataHandler = RE::TESDataHandler::GetSingleton();
 		const Object::Params objectParams(a_cell);
+		auto            numHandles = RE::GetNumReferenceHandles();
 		for (const auto& object : it->second) {
-			object.SpawnObject(dataHandler, objectParams, false);
+			object.SpawnObject(dataHandler, objectParams, numHandles);
 		}
 	}
 }
@@ -556,14 +559,15 @@ void Game::Format::SpawnAtReference(RE::TESObjectREFR* a_ref)
 	if (objectsToSpawn || objectsToSpawnFromTypes) {
 		const auto           dataHandler = RE::TESDataHandler::GetSingleton();
 		const Object::Params params(a_ref);
+		auto                 numHandles = RE::GetNumReferenceHandles();
 		if (objectsToSpawn) {
 			for (const auto& object : *objectsToSpawn) {
-				object.SpawnObject(dataHandler, params, true);
+				object.SpawnObject(dataHandler, params, numHandles);
 			}
 		}
 		if (objectsToSpawnFromTypes) {
 			for (const auto& object : *objectsToSpawnFromTypes) {
-				object.SpawnObject(dataHandler, params, true);
+				object.SpawnObject(dataHandler, params, numHandles);
 			}
 		}
 	}

@@ -186,7 +186,7 @@ namespace Game
 		Object() = default;
 		explicit Object(const Config::ObjectData& a_data);
 
-		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping, bool a_isTemporary, std::size_t a_parentHash, const std::vector<Object>& a_childObjects = {}) const;
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles, bool a_isTemporary, std::size_t a_parentHash, const std::vector<Object>& a_childObjects = {}) const;
 
 		// members
 		ObjectData                       data;
@@ -202,7 +202,7 @@ namespace Game
 
 		bool IsTemporary() const;
 
-		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, bool a_preventClipping) const;
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles) const;
 
 		// members
 		FilterData          filter;
