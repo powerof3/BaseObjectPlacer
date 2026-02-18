@@ -31,13 +31,13 @@ namespace Base
 	{
 		bool        empty() const { return objects.empty(); }
 		std::size_t size() const { return objects.size(); }
-		
-		void        reserve(std::size_t a_count)
+
+		void reserve(std::size_t a_count)
 		{
 			objects.reserve(a_count);
 			weights.reserve(a_count);
 		}
-		
+
 		void emplace_back(RE::TESBoundObject* a_base, float a_weight)
 		{
 			objects.emplace_back(a_base);

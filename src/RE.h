@@ -17,7 +17,7 @@ namespace RE
 		[[nodiscard]] T value(std::size_t seed) const
 		{
 			return (max == std::numeric_limits<T>::max() || min == max) ? min :
-			                               clib_util::RNG(seed).generate<T>(min, max);
+			                                                              clib_util::RNG(seed).generate<T>(min, max);
 		}
 
 		[[nodiscard]] Range deg_to_rad() const

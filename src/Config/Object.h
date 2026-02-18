@@ -73,7 +73,7 @@ namespace Config
 
 	private:
 		Base::WeightedObjects resolvedBases;
-		
+
 		GENERATE_HASH(PrefabObject, a_val.bases, a_val.transform, a_val.data);
 	};
 
