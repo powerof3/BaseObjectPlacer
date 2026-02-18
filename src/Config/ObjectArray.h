@@ -73,7 +73,7 @@ namespace Config
 			Radial,
 			Word>;
 
-		void ReadFlags(const std::string& input);
+		void        ReadFlags(const std::string& input);
 		std::string WriteFlags() const;
 
 		static RE::NiPoint3          GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count);

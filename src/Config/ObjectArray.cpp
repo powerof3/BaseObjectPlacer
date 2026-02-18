@@ -114,7 +114,8 @@ namespace Config
 		}
 	}
 
-	void ObjectArray::ReadFlags(const std::string& input) {
+	void ObjectArray::ReadFlags(const std::string& input)
+	{
 		if (!input.empty()) {
 			const auto flagStrs = string::split(input, "|");
 			for (const auto& flagStr : flagStrs) {
@@ -138,7 +139,8 @@ namespace Config
 		}
 	}
 
-	std::string ObjectArray::WriteFlags() const {
+	std::string ObjectArray::WriteFlags() const
+	{
 		static constexpr std::pair<Flags, std::string_view> flagNames[] = {
 			{ Flags::kRandomizeRotation, "RandomizeRotation" },
 			{ Flags::kRandomizeScale, "RandomizeScale" },

@@ -26,7 +26,7 @@ void Manager::LoadPrefabs()
 			}
 		}
 	}
-	
+
 	logger::info("Loaded {} prefabs", cachedPrefabs.size());
 }
 

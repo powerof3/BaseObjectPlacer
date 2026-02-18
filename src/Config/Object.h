@@ -47,8 +47,7 @@ namespace Config
 			a_val.extraData,
 			a_val.scripts,
 			a_val.motionType,
-			a_val.flags.underlying()
-		);
+			a_val.flags.underlying());
 	};
 
 	struct PrefabObject
