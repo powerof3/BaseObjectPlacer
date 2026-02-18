@@ -77,7 +77,7 @@ namespace RE
 	struct BoundingBox
 	{
 		BoundingBox() = default;
-		BoundingBox(TESObjectREFR* a_ref);
+		BoundingBox(const TESObjectREFR* a_ref);
 
 		NiPoint3 pos;
 		NiPoint3 boundMin;
@@ -175,10 +175,19 @@ struct glz::meta<RE::BSTransform>
 		return false;
 	}
 	static constexpr auto read_rot = [](T& s, const RE::NiPoint3& input) {
-		s.rotate = input * RE::NI_PI / 180;
+		s.rotate.x = RE::deg_to_rad(input.x);
+		s.rotate.y = RE::deg_to_rad(input.y);
+		s.rotate.z = RE::deg_to_rad(input.z);
+	};
+	static constexpr auto write_rot = [](T& s) {
+		return RE::NiPoint3{
+			RE::rad_to_deg(s.rotate.x),
+			RE::rad_to_deg(s.rotate.y),
+			RE::rad_to_deg(s.rotate.z)
+		};
 	};
 	static constexpr auto value = object(
 		"translate", &T::translate,
-		"rotate", glz::custom<read_rot, &T::rotate>,
+		"rotate", glz::custom<read_rot, write_rot>,
 		"scale", &T::scale);
 };

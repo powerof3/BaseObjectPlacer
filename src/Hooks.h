@@ -54,7 +54,7 @@ namespace Hooks
 			func(a_this);
 
 			if (auto root = a_this->Get3D()) {
-				Manager::GetSingleton()->UpdateSerializedObjectHavok(a_this);
+				Manager::GetSingleton()->UpdateSerializedObjectHavok(a_this, root);
 			}
 		}
 		static inline REL::Relocation<decltype(thunk)> func;

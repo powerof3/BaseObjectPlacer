@@ -118,17 +118,13 @@ bool Game::FilterData::PassesFilters(RE::TESObjectREFR* a_ref, RE::TESObjectCELL
 Game::ObjectData::ObjectData(const Config::ObjectData& a_data) :
 	extraData(a_data.extraData),
 	motionType(a_data.motionType),
-	flags(a_data.flags)
-{
-	scripts.reserve(a_data.scripts.size());
-	for (const auto& script : a_data.scripts) {
-		scripts.emplace_back(script);
-	}
-}
+	flags(a_data.flags),
+	scripts(a_data.scripts.begin(), a_data.scripts.end())
+{}
 
 void Game::ObjectData::Merge(const Game::ObjectData& a_parent)
 {
-	if (flags.none(Data::ReferenceFlags::kInheritFromParent)) {
+	if (flags.none(ReferenceFlags::kInheritFromParent)) {
 		return;
 	}
 
@@ -404,11 +400,11 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 	auto [refParams, ref, cell, worldSpace] = a_params;
 
 	const auto baseSize = static_cast<std::uint32_t>(bases.size());
-	const auto refAngle = ref->GetAngle();
+	const auto refAngle = ref ? ref->GetAngle() : RE::NiPoint3();
+
+	auto mgr = Manager::GetSingleton();
 
 	for (auto&& [idx, instance] : std::views::enumerate(instances)) {
-		auto baseIndex = static_cast<std::uint32_t>(idx % baseSize);
-
 		auto hash = instance.hash;
 		if (ref) {
 			if (a_parentHash != 0 || ref->IsDynamicForm()) {
@@ -418,14 +414,19 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 			}
 		}
 
-		if (instance.flags.none(Instance::Flags::kSequentialObjects)) {
+		std::uint32_t baseIndex = 0;
+		if (instance.flags.any(Instance::Flags::kSequentialObjects)) {
+			baseIndex = static_cast<std::uint32_t>(idx % baseSize);
+		} else if (bases.are_weights_equal()) {
 			baseIndex = clib_util::RNG(hash).generate<std::uint32_t>(0, baseSize - 1);
+		} else {
+			baseIndex = static_cast<std::uint32_t>(clib_util::WeightedRNG(hash, bases.weights).generate());
 		}
 
 		hash = hash::combine(hash, baseIndex);
-		Manager::GetSingleton()->AddConfigObject(hash, this);
+		mgr->AddConfigObject(hash, this);
 
-		if (auto id = Manager::GetSingleton()->GetSavedObject(hash); id != 0) {
+		if (auto id = mgr->GetSavedObject(hash); id != 0) {
 			logger::info("\t[{:X}]{:X} already exists, skipping spawn.", hash, id);
 			continue;
 		}
@@ -437,7 +438,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 
 		a_numHandles++;
 
-		const auto baseObject = bases[baseIndex];
+		const auto baseObject = bases.objects[baseIndex];
 		auto       transform = instance.GetWorldTransform(refParams.bb.pos, refAngle, hash);
 		if (ref && data.PreventClipping(baseObject)) {
 			RE::NiPoint3 baseObjectExtents{
@@ -471,7 +472,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 
 			data.SetProperties(createdRef.get(), hash);
 
-			Manager::GetSingleton()->SerializeObject(hash, createdRef, a_isTemporary);
+			mgr->SerializeObject(hash, createdRef, a_isTemporary);
 
 			logger::info("\tSpawning object {:X} with hash {:X}.", createdRef->GetFormID(), hash);
 

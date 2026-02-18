@@ -30,7 +30,7 @@ namespace RE
 		};
 	}
 
-	BoundingBox::BoundingBox(TESObjectREFR* a_ref) :
+	BoundingBox::BoundingBox(const TESObjectREFR* a_ref) :
 		pos(a_ref->GetPosition()),
 		boundMin(a_ref->GetBoundMin()),
 		boundMax(a_ref->GetBoundMax())

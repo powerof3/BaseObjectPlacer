@@ -411,7 +411,7 @@ void Manager::SerializeHash(std::size_t hash, RE::ExtraCachedScale* a_scaleExtra
 	RE::SplitValue(hash, a_scaleExtra->scale3D, a_scaleExtra->refScale);
 }
 
-std::size_t Manager::DeserializeHash(RE::ExtraCachedScale* a_scaleExtra)
+std::size_t Manager::DeserializeHash(const RE::ExtraCachedScale* a_scaleExtra)
 {
 	return RE::RecombineValue(a_scaleExtra->scale3D, a_scaleExtra->refScale);
 }
@@ -486,10 +486,10 @@ void Manager::FinishLoadSerializedObject(RE::TESObjectREFR* a_ref)
 	}
 }
 
-void Manager::UpdateSerializedObjectHavok(RE::TESObjectREFR* a_ref)
+void Manager::UpdateSerializedObjectHavok(RE::TESObjectREFR* a_ref, RE::NiAVObject* a_root)
 {
-	VisitSerializedObject(a_ref, [a_ref](const auto* object, const auto) {
-		object->data.SetPropertiesHavok(a_ref, a_ref->Get3D());
+	VisitSerializedObject(a_ref, [a_ref, a_root](const auto* object, const auto) {
+		object->data.SetPropertiesHavok(a_ref, a_root);
 	});
 }
 

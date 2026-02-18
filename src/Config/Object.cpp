@@ -92,29 +92,31 @@ namespace Config
 		return result;
 	}
 
-	const std::vector<RE::TESBoundObject*>& PrefabObject::GetBases() const
+	const Base::WeightedObjects& PrefabObject::GetBases() const
 	{
 		return resolvedBases;
 	}
 
-	std::vector<RE::TESBoundObject*> PrefabObject::GetBasesOnDemand() const
+	Base::WeightedObjects PrefabObject::GetBasesOnDemand() const
 	{
-		std::vector<RE::TESBoundObject*> checkedBases;
+		Base::WeightedObjects checkedBases;
 		checkedBases.reserve(bases.size());
-		for (const auto& base : bases) {
+
+		for (const auto& [base, weight] : bases) {
 			if (const auto form = RE::GetForm(base)) {
-				if (form->IsBoundObject()) {
-					checkedBases.emplace_back(form->As<RE::TESBoundObject>());
+				if (auto obj = form->As<RE::TESBoundObject>()) {
+					checkedBases.emplace_back(obj, weight);
 				} else if (const auto list = form->As<RE::BGSListForm>()) {
 					list->ForEachForm([&](auto* listForm) {
-						if (listForm->IsBoundObject()) {
-							checkedBases.emplace_back(listForm->As<RE::TESBoundObject>());
+						if (auto listObj = listForm->As<RE::TESBoundObject>()) {
+							checkedBases.emplace_back(listObj, weight);
 						}
 						return RE::BSContainer::ForEachResult::kContinue;
 					});
 				}
 			}
 		}
+
 		return checkedBases;
 	}
 
@@ -135,9 +137,9 @@ namespace Config
 	{
 		using ObjectInstance = Game::Object::Instance;
 
-		const Prefab*                    resolvedPrefab = nullptr;
-		std::vector<RE::TESBoundObject*> resolvedBases;
-		bool                             cachedPrefab = false;
+		const Prefab*         resolvedPrefab = nullptr;
+		Base::WeightedObjects resolvedBases;
+		bool                  cachedPrefab = false;
 
 		std::visit(overload{
 					   [&](const Prefab& a_prefab) {

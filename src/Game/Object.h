@@ -12,7 +12,7 @@ namespace Config
 
 namespace Game
 {
-	using ReferenceFlags = Data::ReferenceFlags;
+	using ReferenceFlags = Base::ReferenceFlags;
 
 	struct ObjectFilter
 	{
@@ -72,7 +72,7 @@ namespace Game
 		// members
 		GameExtraData                               extraData;
 		BSScript::GameScripts                       scripts;
-		Data::MotionType                            motionType;
+		Base::MotionType                            motionType;
 		REX::EnumSet<ReferenceFlags, std::uint32_t> flags;
 
 	private:
@@ -189,9 +189,9 @@ namespace Game
 		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles, bool a_isTemporary, std::size_t a_parentHash, const std::vector<Object>& a_childObjects = {}) const;
 
 		// members
-		ObjectData                       data;
-		std::vector<RE::TESBoundObject*> bases;
-		std::vector<Instance>            instances;
+		ObjectData            data;
+		Base::WeightedObjects bases;
+		std::vector<Instance> instances;
 	};
 
 	class RootObject : public Object

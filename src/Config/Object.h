@@ -32,14 +32,14 @@ namespace Config
 
 	struct ObjectData
 	{
-		using ReferenceFlags = Data::ReferenceFlags;
+		using ReferenceFlags = Base::ReferenceFlags;
 
 		void        ReadReferenceFlags(const std::string& input);
 		std::string WriteReferenceFlags() const;
 
 		ConfigExtraData                             extraData;
 		BSScript::ConfigScripts                     scripts;
-		Data::MotionType                            motionType;
+		Base::MotionType                            motionType;
 		REX::EnumSet<ReferenceFlags, std::uint32_t> flags;
 
 	private:
@@ -52,17 +52,28 @@ namespace Config
 
 	struct PrefabObject
 	{
-		const std::vector<RE::TESBoundObject*>& GetBases() const;
-		std::vector<RE::TESBoundObject*>        GetBasesOnDemand() const;
-		void                                    ResolveBasesOnLoad();
+		struct WeightedObject
+		{
+			std::string object{};
+			float       weight{ 100.0f };
+
+		private:
+			GENERATE_HASH(WeightedObject, a_val.object, a_val.weight);
+		};
+
+		const Base::WeightedObjects& GetBases() const;
+		Base::WeightedObjects        GetBasesOnDemand() const;
+
+		void ResolveBasesOnLoad();
 
 		// members
-		std::vector<std::string>         bases;
-		std::vector<RE::TESBoundObject*> resolvedBases;
-		RE::BSTransformRange             transform;  // local
-		ObjectData                       data;
+		std::vector<WeightedObject> bases;
+		RE::BSTransformRange        transform;  // local
+		ObjectData                  data;
 
 	private:
+		Base::WeightedObjects resolvedBases;
+		
 		GENERATE_HASH(PrefabObject, a_val.bases, a_val.transform, a_val.data);
 	};
 
@@ -149,6 +160,19 @@ struct glz::meta<Config::FilterData>
 		"whiteList", &T::whiteList,
 		"conditions", &T::conditions,
 		"chance", glz::custom<read_chance, write_chance>);
+};
+
+template <>
+struct glz::meta<Config::PrefabObject::WeightedObject>
+{
+	using T = Config::PrefabObject::WeightedObject;
+	static constexpr bool requires_key(std::string_view a_key, bool)
+	{
+		return a_key == "object";
+	}
+	static constexpr auto value = object(
+		"object", &T::object,
+		"weight", &T::weight);
 };
 
 template <>

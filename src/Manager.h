@@ -36,11 +36,11 @@ public:
 	void ClearSavedObjects(bool a_deleteObjects = false);
 
 	static void                  SerializeHash(std::size_t hash, RE::ExtraCachedScale* a_scaleExtra);
-	static std::size_t           DeserializeHash(RE::ExtraCachedScale* a_scaleExtra);
+	static std::size_t           DeserializeHash(const RE::ExtraCachedScale* a_scaleExtra);
 	static RE::ExtraCachedScale* GetSerializedObjectData(RE::TESObjectREFR* a_ref);
 	static std::size_t           GetSerializedObjectHash(RE::TESObjectREFR* a_ref);
 
-	void UpdateSerializedObjectHavok(RE::TESObjectREFR* a_ref);
+	void UpdateSerializedObjectHavok(RE::TESObjectREFR* a_ref, RE::NiAVObject* a_root);
 	void SerializeObject(std::size_t hash, const RE::TESObjectREFRPtr& a_ref, bool a_temporary);
 
 	void FinishLoadSerializedObject(RE::TESObjectREFR* a_ref);

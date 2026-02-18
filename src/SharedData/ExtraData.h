@@ -2,47 +2,18 @@
 
 #include "Transform.h"
 
-// Find place to store this
-namespace Data
-{
-	enum class ReferenceFlags : uint32_t
-	{
-		kNoAIAcquire = 1 << 0,         // AI will not attempt to pick up containers or objects marked with this flag.
-		kInitiallyDisabled = 1 << 1,   // The reference starts disabled ("not there") and must be enabled through script or game events.
-		kHiddenFromLocalMap = 1 << 2,  // The reference will not be displayed on the local map.
-		kInaccessible = 1 << 3,        // Only for Doors; makes them inoperable and shows "Inaccessible".
-		kOpenByDefault = 1 << 4,       // For Doors/Containers; begins in the open state.
-		kIgnoredBySandbox = 1 << 5,    // Prevents Sandboxing NPCs from using this reference (useful for furniture/idle markers).
-		kIsFullLOD = 1 << 6,           // Reference will not fade from a distance.
-		//user
-		kTemporary = 1 << 14,
-		kSequentialObjects = 1 << 15,
-		kPreventClipping = 1 << 16,
-		kInheritFromParent = 1 << 17,
-	};
-
-	struct MotionType
-	{
-		RE::hkpMotion::MotionType type{ RE::hkpMotion::MotionType::kInvalid };
-		bool                      allowActivate;
-
-	private:
-		GENERATE_HASH(MotionType, a_val.type, a_val.allowActivate)
-	};
-}
-
 namespace Extra
 {
 	template <class T>
 	struct ActivateParent
 	{
-		ActivateParent<T>() = default;
-		ActivateParent<T>(const ActivateParent<T>& other) :
+		ActivateParent() = default;
+		ActivateParent(const ActivateParent& other) :
 			reference(other.reference),
 			delay(other.delay)
 		{}
 
-		explicit ActivateParent<T>(const ActivateParent<std::string>& other)
+		explicit ActivateParent(const ActivateParent<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			reference(RE::GetFormID(other.reference)),
@@ -55,28 +26,24 @@ namespace Extra
 		float delay{ 0.0f };
 
 	private:
-		GENERATE_HASH(ActivateParent<T>, a_val.reference, a_val.delay)
+		GENERATE_HASH(ActivateParent, a_val.reference, a_val.delay)
 	};
 
 	template <class T>
 	struct ActivateParents
 	{
-		ActivateParents<T>() = default;
-		ActivateParents<T>(const ActivateParents<T>& other) :
+		ActivateParents() = default;
+		ActivateParents(const ActivateParents& other) :
 			parents(other.parents),
 			parentActivateOnly(other.parentActivateOnly)
 		{}
 
-		explicit ActivateParents<T>(const ActivateParents<std::string>& other)
+		explicit ActivateParents(const ActivateParents<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
+			parents(other.parents.begin(), other.parents.end()),
 			parentActivateOnly(other.parentActivateOnly)
-		{
-			parents.reserve(other.parents.size());
-			for (const auto& parent : other.parents) {
-				parents.emplace_back(parent);
-			}
-		}
+		{}
 
 		bool empty() const { return parents.empty(); }
 
@@ -102,20 +69,20 @@ namespace Extra
 		bool                           parentActivateOnly{ false };
 
 	private:
-		GENERATE_HASH(ActivateParents<T>, a_val.parents, a_val.parentActivateOnly)
+		GENERATE_HASH(ActivateParents, a_val.parents, a_val.parentActivateOnly)
 	};
 
 	template <class T>
 	struct EnableStateParent
 	{
-		EnableStateParent<T>() = default;
-		EnableStateParent<T>(const EnableStateParent<T>& other) :
+		EnableStateParent() = default;
+		EnableStateParent(const EnableStateParent& other) :
 			reference(other.reference),
 			oppositeState(other.oppositeState),
 			popIn(other.popIn)
 		{}
 
-		explicit EnableStateParent<T>(const EnableStateParent<std::string>& other)
+		explicit EnableStateParent(const EnableStateParent<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			reference(RE::GetFormID(other.reference)),
@@ -156,19 +123,19 @@ namespace Extra
 		bool popIn{ false };
 
 	private:
-		GENERATE_HASH(EnableStateParent<T>, a_val.reference, a_val.oppositeState, a_val.popIn)
+		GENERATE_HASH(EnableStateParent, a_val.reference, a_val.oppositeState, a_val.popIn)
 	};
 
 	template <class T>
 	struct LinkedRef
 	{
-		LinkedRef<T>() = default;
-		LinkedRef<T>(const LinkedRef<T>& other) :
+		LinkedRef() = default;
+		LinkedRef(const LinkedRef& other) :
 			reference(other.reference),
 			keyword(other.keyword)
 		{}
 
-		explicit LinkedRef<T>(const LinkedRef<std::string>& other)
+		explicit LinkedRef(const LinkedRef<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			reference(RE::GetFormID(other.reference)),
@@ -199,19 +166,19 @@ namespace Extra
 		T keyword{};
 
 	private:
-		GENERATE_HASH(LinkedRef<T>, a_val.reference, a_val.keyword)
+		GENERATE_HASH(LinkedRef, a_val.reference, a_val.keyword)
 	};
 
 	template <class T>
 	struct Lock
 	{
-		Lock<T>() = default;
-		Lock<T>(const Lock<T>& other) :
+		Lock() = default;
+		Lock(const Lock& other) :
 			lockLevel(other.lockLevel),
 			key(other.key)
 		{}
 
-		explicit Lock<T>(const Lock<std::string>& other)
+		explicit Lock(const Lock<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			lockLevel(other.lockLevel),
@@ -240,20 +207,20 @@ namespace Extra
 		T              key{};
 
 	private:
-		GENERATE_HASH(Lock<T>, a_val.lockLevel, a_val.key)
+		GENERATE_HASH(Lock, a_val.lockLevel, a_val.key)
 	};
 
 	template <class T>
 	struct Teleport
 	{
-		Teleport<T>() = default;
-		Teleport<T>(const Teleport<T>& other) :
+		Teleport() = default;
+		Teleport(const Teleport& other) :
 			linkedDoor(other.linkedDoor),
 			position(other.position),
 			rotation(other.rotation)
 		{}
 
-		explicit Teleport<T>(const Teleport<std::string>& other)
+		explicit Teleport(const Teleport<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			linkedDoor(RE::GetFormID(other.linkedDoor)),
@@ -296,8 +263,8 @@ namespace Extra
 	class ExtraData
 	{
 	public:
-		ExtraData<T>() = default;
-		ExtraData<T>(const ExtraData<T>& other) :
+		ExtraData() = default;
+		ExtraData(const ExtraData& other) :
 			teleport(other.teleport),
 			lock(other.lock),
 			enableStateParent(other.enableStateParent),
@@ -309,7 +276,7 @@ namespace Extra
 			count(other.count),
 			charge(other.charge)
 		{}
-		ExtraData<T>(const ExtraData<std::string>& other)
+		ExtraData(const ExtraData<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
 			:
 			teleport(other.teleport),
@@ -370,7 +337,7 @@ namespace Extra
 			}
 		}
 
-		void Merge(const ExtraData<T>& a_source)
+		void Merge(const ExtraData& a_source)
 			requires std::is_same_v<RE::FormID, T>
 		{
 			if (encounterZone == 0) {
@@ -418,7 +385,7 @@ namespace Extra
 		float                     charge{};
 
 	private:
-		GENERATE_HASH(ExtraData<T>,
+		GENERATE_HASH(ExtraData,
 			a_val.teleport,
 			a_val.lock,
 			a_val.enableStateParent,
