@@ -538,7 +538,7 @@ void Game::Format::SpawnInCell(RE::TESObjectCELL* a_cell)
 	if (const auto it = cells.find(a_cell->GetFormEditorID()); it != cells.end()) {
 		const auto           dataHandler = RE::TESDataHandler::GetSingleton();
 		const Object::Params objectParams(a_cell);
-		auto            numHandles = RE::GetNumReferenceHandles();
+		auto                 numHandles = RE::GetNumReferenceHandles();
 		for (const auto& object : it->second) {
 			object.SpawnObject(dataHandler, objectParams, numHandles);
 		}
