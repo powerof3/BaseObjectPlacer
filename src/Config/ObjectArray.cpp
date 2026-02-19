@@ -126,6 +126,9 @@ namespace Config
 				case "RandomizeScale"_h:
 					flags.set(Flags::kRandomizeScale);
 					break;
+				case "IncrementTranslate"_h:
+					flags.set(Flags::kIncrementTranslate);
+					break;
 				case "IncrementRotation"_h:
 					flags.set(Flags::kIncrementRotation);
 					break;
@@ -144,6 +147,7 @@ namespace Config
 		static constexpr std::pair<Flags, std::string_view> flagNames[] = {
 			{ Flags::kRandomizeRotation, "RandomizeRotation" },
 			{ Flags::kRandomizeScale, "RandomizeScale" },
+			{ Flags::kIncrementTranslate, "IncrementTranslate" },
 			{ Flags::kIncrementRotation, "IncrementRotation" },
 			{ Flags::kIncrementScale, "IncrementScale" }
 		};
@@ -162,18 +166,34 @@ namespace Config
 		return result;
 	}
 
+	RE::NiPoint3 ObjectArray::GetTranslateStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count)
+	{
+		const auto transMin = a_pivotRange.translate.min();
+		const auto transMax = a_pivotRange.translate.max();
+
+		const auto get_wrapped_range = [](float min, float max) {
+			return max - min;
+		};
+
+		const auto transX = get_wrapped_range(transMin.x, transMax.x);
+		const auto transY = get_wrapped_range(transMin.y, transMax.y);
+		const auto transZ = get_wrapped_range(transMin.z, transMax.z);
+
+		return RE::NiPoint3(transX, transY, transZ) / static_cast<float>(a_count);
+	}
+
 	RE::NiPoint3 ObjectArray::GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count)
 	{
-		auto rotMin = a_pivotRange.rotate.min();
-		auto rotMax = a_pivotRange.rotate.max();
+		const auto rotMin = a_pivotRange.rotate.min();
+		const auto rotMax = a_pivotRange.rotate.max();
 
 		const auto get_wrapped_range = [](float min, float max) {
 			return (max >= min) ? (max - min) : (RE::NI_TWO_PI - min + max);
 		};
 
-		auto rotX = get_wrapped_range(rotMin.x, rotMax.x);
-		auto rotY = get_wrapped_range(rotMin.y, rotMax.y);
-		auto rotZ = get_wrapped_range(rotMin.z, rotMax.z);
+		const auto rotX = get_wrapped_range(rotMin.x, rotMax.x);
+		const auto rotY = get_wrapped_range(rotMin.y, rotMax.y);
+		const auto rotZ = get_wrapped_range(rotMin.z, rotMax.z);
 
 		return RE::NiPoint3(rotX, rotY, rotZ) / static_cast<float>(a_count);
 	}
@@ -200,20 +220,27 @@ namespace Config
 
 		const bool randomizeRot = flags.any(Flags::kRandomizeRotation);
 		const bool randomizeScale = flags.any(Flags::kRandomizeScale);
+		const bool incrementTrans = flags.any(Flags::kIncrementTranslate);
 		const bool incrementRot = flags.any(Flags::kIncrementRotation);
 		const bool incrementScale = flags.any(Flags::kIncrementScale);
 
-		if (randomizeRot || randomizeScale || incrementRot || incrementScale) {
+		if (randomizeRot || randomizeScale || incrementTrans || incrementRot || incrementScale) {
+			RE::NiPoint3 transStep{};
 			RE::NiPoint3 rotStep{};
 			float        scaleStep{};
 
-			if (incrementRot || incrementScale) {
-				const auto count = arrayTransforms.size() - 1;
-				if (incrementRot) {
-					rotStep = GetRotationStep(a_pivotRange, count);
-				}
-				if (incrementScale) {
-					scaleStep = a_pivotRange.scale.max != RE::NI_INFINITY ? ((a_pivotRange.scale.max - a_pivotRange.scale.min) / static_cast<float>(count)) : 0.0f;
+			if (incrementTrans || incrementRot || incrementScale) {
+				if (arrayTransforms.size() > 1) {
+					const auto count = arrayTransforms.size() - 1;
+					if (incrementTrans) {
+						transStep = GetTranslateStep(a_pivotRange, count);
+					}
+					if (incrementRot) {
+						rotStep = GetRotationStep(a_pivotRange, count);
+					}
+					if (incrementScale) {
+						scaleStep = a_pivotRange.scale.max != RE::NI_INFINITY ? ((a_pivotRange.scale.max - a_pivotRange.scale.min) / static_cast<float>(count)) : 0.0f;
+					}
 				}
 			}
 
@@ -233,6 +260,10 @@ namespace Config
 					transform.scale = a_pivotRange.scale.value(idxSeed);
 				} else if (incrementScale) {
 					transform.scale = a_pivotRange.scale.min + (scaleStep * static_cast<float>(idx));
+				}
+
+				if (incrementTrans) {
+					transform.translate += transStep * static_cast<float>(idx);
 				}
 			}
 		}

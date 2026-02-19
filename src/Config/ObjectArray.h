@@ -10,8 +10,9 @@ namespace Config
 		{
 			kRandomizeRotation = 1 << 0,
 			kRandomizeScale = 1 << 1,
-			kIncrementRotation = 1 << 2,
-			kIncrementScale = 1 << 3
+			kIncrementTranslate = 1 << 2,
+			kIncrementRotation = 1 << 3,
+			kIncrementScale = 1 << 4
 		};
 
 		struct Grid
@@ -76,7 +77,9 @@ namespace Config
 		void        ReadFlags(const std::string& input);
 		std::string WriteFlags() const;
 
-		static RE::NiPoint3          GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count);
+		static RE::NiPoint3          GetTranslateStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count);
+		static RE::NiPoint3 GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count);
+
 		std::vector<RE::BSTransform> GetTransforms(const RE::BSTransformRange& a_pivotRange, std::size_t a_hash) const;
 
 		// members

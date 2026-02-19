@@ -163,9 +163,8 @@ namespace Game
 				kSequentialObjects = 1 << 0,
 				kRandomizeRotation = 1 << 1,
 				kRandomizeScale = 1 << 2,
-				kRelativeTranslate = 1 << 3,
-				kRelativeRotate = 1 << 4,
-				kRelativeScale = 1 << 5,
+				kRelativeRotate = 1 << 3,
+				kRelativeScale = 1 << 4,
 			};
 
 			Instance() = default;

@@ -355,9 +355,6 @@ REX::EnumSet<Game::Object::Instance::Flags> Game::Object::Instance::GetInstanceF
 	if (a_data.flags.any(ReferenceFlags::kSequentialObjects)) {
 		flags.set(Flags::kSequentialObjects);
 	}
-	if (a_range.translate.relative) {
-		flags.set(Flags::kRelativeTranslate);
-	}
 	if (a_range.rotate.relative) {
 		flags.set(Flags::kRelativeRotate);
 	}

@@ -57,7 +57,7 @@ namespace BSScript
 								   }
 							   },
 							   [&](const std::vector<std::string>& a_val) {
-								   if (auto form = RE::GetForm(a_val[0]); form) {
+								   if (auto form = !a_val.empty() ? RE::GetForm(a_val[0]) : nullptr; form) {
 									   std::vector<RE::TESForm*> forms;
 									   forms.push_back(form);
 									   for (auto& str : std::ranges::drop_view{ a_val, 1 }) {

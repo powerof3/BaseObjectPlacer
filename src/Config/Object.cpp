@@ -213,8 +213,6 @@ namespace Config
 				childObject.bases = std::move(childBases);
 
 				auto childFlags = ObjectInstance::GetInstanceFlags(childObject.data, child.transform, array);
-				childFlags.set(ObjectInstance::Flags::kRelativeTranslate);
-				childFlags.set(ObjectInstance::Flags::kRelativeRotate);
 
 				childObject.instances.emplace_back(child.transform, childFlags.get(), childHash);
 				childObjects.push_back(std::move(childObject));
