@@ -18,69 +18,21 @@ namespace Config
 
 	void ObjectData::ReadReferenceFlags(const std::string& input)
 	{
+		static constexpr auto map = clib_util::constexpr_map{ flagArray };
+		
 		if (!input.empty()) {
 			const auto flagStrs = string::split(input, "|");
 			for (const auto& flagStr : flagStrs) {
-				switch (string::const_hash(flagStr)) {
-				case "NoAIAcquire"_h:
-					flags.set(ReferenceFlags::kNoAIAcquire);
-					break;
-				case "InitiallyDisabled"_h:
-					flags.set(ReferenceFlags::kInitiallyDisabled);
-					break;
-				case "HiddenFromLocalMap"_h:
-					flags.set(ReferenceFlags::kHiddenFromLocalMap);
-					break;
-				case "Inaccessible"_h:
-					flags.set(ReferenceFlags::kInaccessible);
-					break;
-				case "OpenByDefault"_h:
-					flags.set(ReferenceFlags::kOpenByDefault);
-					break;
-				case "IgnoredBySandbox"_h:
-					flags.set(ReferenceFlags::kIgnoredBySandbox);
-					break;
-				case "IsFullLOD"_h:
-					flags.set(ReferenceFlags::kIsFullLOD);
-					break;
-				case "Temporary"_h:
-					flags.set(ReferenceFlags::kTemporary);
-					break;
-				case "SequentialObjects"_h:
-					flags.set(ReferenceFlags::kSequentialObjects);
-					break;
-				case "PreventClipping"_h:
-					flags.set(ReferenceFlags::kPreventClipping);
-					break;
-				case "InheritFromParent"_h:
-					flags.set(ReferenceFlags::kInheritFromParent);
-					break;
-				default:
-					break;
-				}
+				flags.set(map.at(flagStr));
 			}
 		}
 	}
 
 	std::string ObjectData::WriteReferenceFlags() const
 	{
-		static constexpr std::pair<ReferenceFlags, std::string_view> flagNames[] = {
-			{ ReferenceFlags::kNoAIAcquire, "NoAIAcquire" },
-			{ ReferenceFlags::kInitiallyDisabled, "InitiallyDisabled" },
-			{ ReferenceFlags::kHiddenFromLocalMap, "HiddenFromLocalMap" },
-			{ ReferenceFlags::kInaccessible, "Inaccessible" },
-			{ ReferenceFlags::kOpenByDefault, "OpenByDefault" },
-			{ ReferenceFlags::kIgnoredBySandbox, "IgnoredBySandbox" },
-			{ ReferenceFlags::kIsFullLOD, "IsFullLOD" },
-			{ ReferenceFlags::kTemporary, "Temporary" },
-			{ ReferenceFlags::kSequentialObjects, "SequentialObjects" },
-			{ ReferenceFlags::kPreventClipping, "PreventClipping" },
-			{ ReferenceFlags::kInheritFromParent, "InheritFromParent" }
-		};
-
 		std::string result;
 
-		for (const auto& [flag, name] : flagNames) {
+		for (const auto& [name, flag] : flagArray) {
 			if (flags.any(flag)) {
 				if (!result.empty()) {
 					result += '|';

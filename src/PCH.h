@@ -15,6 +15,7 @@
 #include <ClibUtil/RNG.hpp>
 #include <ClibUtil/distribution.hpp>
 #include <ClibUtil/simpleINI.hpp>
+#include <ClibUtil/constexpr_map.hpp>
 #include <MergeMapperPluginAPI.h>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>

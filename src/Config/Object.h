@@ -43,6 +43,21 @@ namespace Config
 		REX::EnumSet<ReferenceFlags, std::uint32_t> flags;
 
 	private:
+		static constexpr std::array<std::pair<std::string_view, ReferenceFlags>, 13> flagArray{
+			{ { "InitiallyDisabled"sv, ReferenceFlags::kInitiallyDisabled },
+				{ "HiddenFromLocalMap"sv, ReferenceFlags::kHiddenFromLocalMap },
+				{ "Inaccessible"sv, ReferenceFlags::kInaccessible },
+				{ "OpenByDefault"sv, ReferenceFlags::kOpenByDefault },
+				{ "IgnoredBySandbox"sv, ReferenceFlags::kIgnoredBySandbox },
+				{ "IsFullLOD"sv, ReferenceFlags::kIsFullLOD },
+				{ "Temporary"sv, ReferenceFlags::kTemporary },
+				{ "SequentialObjects"sv, ReferenceFlags::kSequentialObjects },
+				{ "PreventClipping"sv, ReferenceFlags::kPreventClipping },
+				{ "InheritFlags"sv, ReferenceFlags::kInheritFlags },
+				{ "InheritExtraData"sv, ReferenceFlags::kInheritExtraData },
+				{ "InheritScripts"sv, ReferenceFlags::kInheritScripts } }
+		};
+
 		GENERATE_HASH(ObjectData,
 			a_val.extraData,
 			a_val.scripts,

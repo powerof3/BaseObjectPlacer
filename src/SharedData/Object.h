@@ -15,7 +15,9 @@ namespace Base
 		kTemporary = 1 << 14,
 		kSequentialObjects = 1 << 15,
 		kPreventClipping = 1 << 16,
-		kInheritFromParent = 1 << 17,
+		kInheritFlags = 1 << 17,
+		kInheritExtraData = 1 << 18,
+		kInheritScripts = 1 << 19,
 	};
 
 	struct MotionType

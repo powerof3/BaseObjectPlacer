@@ -14,11 +14,7 @@ namespace RE
 
 	NiPoint3 Point3Range::max() const
 	{
-		return {
-			x.max == NI_INFINITY ? x.min : x.max,
-			y.max == NI_INFINITY ? y.min : y.max,
-			z.max == NI_INFINITY ? z.min : z.max
-		};
+		return { x.max, y.max, z.max };
 	}
 
 	NiPoint3 Point3Range::value(std::size_t seed) const

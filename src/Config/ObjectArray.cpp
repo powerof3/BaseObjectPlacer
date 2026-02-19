@@ -116,45 +116,21 @@ namespace Config
 
 	void ObjectArray::ReadFlags(const std::string& input)
 	{
+		static auto map = clib_util::constexpr_map{ flagArray };
+		
 		if (!input.empty()) {
 			const auto flagStrs = string::split(input, "|");
 			for (const auto& flagStr : flagStrs) {
-				switch (string::const_hash(flagStr)) {
-				case "RandomizeRotation"_h:
-					flags.set(Flags::kRandomizeRotation);
-					break;
-				case "RandomizeScale"_h:
-					flags.set(Flags::kRandomizeScale);
-					break;
-				case "IncrementTranslate"_h:
-					flags.set(Flags::kIncrementTranslate);
-					break;
-				case "IncrementRotation"_h:
-					flags.set(Flags::kIncrementRotation);
-					break;
-				case "IncrementScale"_h:
-					flags.set(Flags::kIncrementScale);
-					break;
-				default:
-					break;
-				}
+				flags.set(map.at(flagStr));
 			}
 		}
 	}
 
 	std::string ObjectArray::WriteFlags() const
 	{
-		static constexpr std::pair<Flags, std::string_view> flagNames[] = {
-			{ Flags::kRandomizeRotation, "RandomizeRotation" },
-			{ Flags::kRandomizeScale, "RandomizeScale" },
-			{ Flags::kIncrementTranslate, "IncrementTranslate" },
-			{ Flags::kIncrementRotation, "IncrementRotation" },
-			{ Flags::kIncrementScale, "IncrementScale" }
-		};
-
 		std::string result;
 
-		for (const auto& [flag, name] : flagNames) {
+		for (const auto& [name, flag] : flagArray) {
 			if (flags.any(flag)) {
 				if (!result.empty()) {
 					result += '|';
@@ -172,6 +148,9 @@ namespace Config
 		const auto transMax = a_pivotRange.translate.max();
 
 		const auto get_wrapped_range = [](float min, float max) {
+			if (max == RE::NI_INFINITY) {
+				return 0.0f;
+			}
 			return max - min;
 		};
 
@@ -188,6 +167,9 @@ namespace Config
 		const auto rotMax = a_pivotRange.rotate.max();
 
 		const auto get_wrapped_range = [](float min, float max) {
+			if (max == RE::NI_INFINITY) {
+				return 0.0f;
+			}
 			return (max >= min) ? (max - min) : (RE::NI_TWO_PI - min + max);
 		};
 
@@ -220,7 +202,7 @@ namespace Config
 
 		const bool randomizeRot = flags.any(Flags::kRandomizeRotation);
 		const bool randomizeScale = flags.any(Flags::kRandomizeScale);
-		const bool incrementTrans = flags.any(Flags::kIncrementTranslate);
+		const bool incrementTrans = flags.any(Flags::kIncrementTranslation);
 		const bool incrementRot = flags.any(Flags::kIncrementRotation);
 		const bool incrementScale = flags.any(Flags::kIncrementScale);
 
@@ -250,10 +232,10 @@ namespace Config
 
 				if (randomizeRot) {
 					transform.rotate = a_pivotRange.rotate.value(idxSeed);
+					RE::WrapAngle(transform.rotate);
 				} else if (incrementRot) {
-					auto rot = a_pivotRange.rotate.min() + (rotStep * static_cast<float>(idx));
-					RE::WrapAngle(rot);
-					transform.rotate = rot;
+					transform.rotate = a_pivotRange.rotate.min() + (rotStep * static_cast<float>(idx));
+					RE::WrapAngle(transform.rotate);
 				}
 
 				if (randomizeScale) {
@@ -263,7 +245,7 @@ namespace Config
 				}
 
 				if (incrementTrans) {
-					transform.translate += transStep * static_cast<float>(idx);
+					transform.translate += a_pivotRange.translate.min() + (transStep * static_cast<float>(idx));
 				}
 			}
 		}

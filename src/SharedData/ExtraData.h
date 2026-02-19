@@ -20,7 +20,7 @@ namespace Extra
 			delay(other.delay)
 		{}
 
-		bool empty() const { return reference == 0; }
+		bool none() const { return reference == 0; }
 
 		T     reference{};
 		float delay{ 0.0f };
@@ -45,7 +45,7 @@ namespace Extra
 			parentActivateOnly(other.parentActivateOnly)
 		{}
 
-		bool empty() const { return parents.empty(); }
+		bool none() const { return parents.empty(); }
 
 		void AddExtraData(RE::TESObjectREFR* a_ref) const
 			requires std::is_same_v<RE::FormID, T>
@@ -90,7 +90,7 @@ namespace Extra
 			popIn(other.popIn)
 		{}
 
-		bool empty() const { return reference == 0; }
+		bool none() const { return reference == 0; }
 
 		void AddExtraData(RE::TESObjectREFR* a_ref) const
 			requires std::is_same_v<RE::FormID, T>
@@ -142,7 +142,7 @@ namespace Extra
 			keyword(RE::GetFormID(other.keyword))
 		{}
 
-		bool empty() const { return reference == 0; }
+		bool none() const { return reference == 0; }
 
 		void AddExtraData(RE::TESObjectREFR* a_ref) const
 			requires std::is_same_v<RE::FormID, T>
@@ -185,7 +185,7 @@ namespace Extra
 			key(RE::GetFormID(other.key))
 		{}
 
-		bool empty() const { return lockLevel == RE::LOCK_LEVEL::kUnlocked && key == 0; }
+		bool none() const { return lockLevel == RE::LOCK_LEVEL::kUnlocked && key == 0; }
 
 		void AddExtraData(RE::TESObjectREFR* a_ref) const
 			requires std::is_same_v<RE::FormID, T>
@@ -228,7 +228,7 @@ namespace Extra
 			rotation(other.rotation)
 		{}
 
-		bool empty() const { return linkedDoor == 0; }
+		bool none() const { return linkedDoor == 0; }
 
 		void AddExtraData(RE::TESObjectREFR* a_ref) const
 			requires std::is_same_v<RE::FormID, T>
@@ -348,23 +348,23 @@ namespace Extra
 			}
 			/*if (displayName.empty()) {
 				displayName = a_source.displayName;
-			}*/
+			}
 			if (count.min == 0) {
 				count = a_source.count;
-			}
+			}*/
 			if (charge == 0.0f) {
 				charge = a_source.charge;
 			}
-			if (activateParents.empty()) {
+			if (activateParents.none()) {
 				activateParents = a_source.activateParents;
 			}
-			if (enableStateParent.empty()) {
+			if (enableStateParent.none()) {
 				enableStateParent = a_source.enableStateParent;
 			}
-			if (teleport.empty()) {
+			if (teleport.none()) {
 				teleport = a_source.teleport;
 			}
-			if (lock.empty()) {
+			if (lock.none()) {
 				lock = a_source.lock;
 			}
 			if (linkedRefs.empty()) {

@@ -10,7 +10,7 @@ namespace Config
 		{
 			kRandomizeRotation = 1 << 0,
 			kRandomizeScale = 1 << 1,
-			kIncrementTranslate = 1 << 2,
+			kIncrementTranslation = 1 << 2,
 			kIncrementRotation = 1 << 3,
 			kIncrementScale = 1 << 4
 		};
@@ -77,7 +77,7 @@ namespace Config
 		void        ReadFlags(const std::string& input);
 		std::string WriteFlags() const;
 
-		static RE::NiPoint3          GetTranslateStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count);
+		static RE::NiPoint3 GetTranslateStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count);
 		static RE::NiPoint3 GetRotationStep(const RE::BSTransformRange& a_pivotRange, std::size_t a_count);
 
 		std::vector<RE::BSTransform> GetTransforms(const RE::BSTransformRange& a_pivotRange, std::size_t a_hash) const;
@@ -89,6 +89,14 @@ namespace Config
 		RE::NiPoint3                       rotate;
 
 	private:
+		static constexpr std::array<std::pair<std::string_view, Flags>, 5> flagArray{
+			{ { "RandomizeRotation"sv, Flags::kRandomizeRotation },
+				{ "RandomizeScale"sv, Flags::kRandomizeScale },
+				{ "IncrementTranslation"sv, Flags::kIncrementTranslation },
+				{ "IncrementRotation"sv, Flags::kIncrementRotation },
+				{ "IncrementScale"sv, Flags::kIncrementScale } }
+		};
+
 		GENERATE_HASH(ObjectArray,
 			a_val.array,
 			a_val.seed,

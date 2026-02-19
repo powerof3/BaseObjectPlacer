@@ -124,19 +124,19 @@ Game::ObjectData::ObjectData(const Config::ObjectData& a_data) :
 
 void Game::ObjectData::Merge(const Game::ObjectData& a_parent)
 {
-	if (flags.none(ReferenceFlags::kInheritFromParent)) {
-		return;
-	}
-
-	flags = a_parent.flags;
-
-	extraData.Merge(a_parent.extraData);
-
 	if (motionType.type == RE::hkpMotion::MotionType::kInvalid) {
 		motionType = a_parent.motionType;
 	}
 
-	if (scripts.empty() && !a_parent.scripts.empty()) {
+	if (flags.any(ReferenceFlags::kInheritFlags)) {
+		flags = a_parent.flags;
+	}
+
+	if (flags.any(ReferenceFlags::kInheritExtraData)) {
+		extraData.Merge(a_parent.extraData);
+	}
+
+	if (flags.any(ReferenceFlags::kInheritScripts) && !a_parent.scripts.empty()) {
 		scripts.reserve(a_parent.scripts.size());
 		for (const auto& script : a_parent.scripts) {
 			scripts.emplace_back(script);
@@ -356,7 +356,7 @@ REX::EnumSet<Game::Object::Instance::Flags> Game::Object::Instance::GetInstanceF
 		flags.set(Flags::kSequentialObjects);
 	}
 	if (a_range.rotate.relative) {
-		flags.set(Flags::kRelativeRotate);
+		flags.set(Flags::kRelativeRotation);
 	}
 	if (a_range.scale.relative) {
 		flags.set(Flags::kRelativeScale);
@@ -378,7 +378,7 @@ RE::BSTransform Game::Object::Instance::GetWorldTransform(const RE::NiPoint3& a_
 		newTransform.rotate = transformRange.rotate.value(a_hash);
 		RE::WrapAngle(newTransform.rotate);
 	}
-	if (flags.any(Flags::kRelativeRotate)) {
+	if (flags.any(Flags::kRelativeRotation)) {
 		newTransform.rotate += a_refAngle;
 		RE::WrapAngle(newTransform.rotate);
 	}
