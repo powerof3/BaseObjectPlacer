@@ -57,7 +57,7 @@ namespace Base
 				}
 			}
 		}
-		
+
 		bool        empty() const { return objects.empty(); }
 		std::size_t size() const { return objects.size(); }
 
@@ -68,7 +68,7 @@ namespace Base
 		}
 
 		void emplace_back(const std::string& a_base, float a_weight)
-				requires std::is_same_v<std::string, T>
+			requires std::is_same_v<std::string, T>
 		{
 			objects.emplace_back(a_base);
 			weights.emplace_back(a_weight);

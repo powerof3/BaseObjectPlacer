@@ -66,7 +66,7 @@ namespace Config
 	Base::WeightedObjects<RE::TESBoundObject*> Prefab::GetBaseObjects() const
 	{
 		Base::WeightedObjects<RE::TESBoundObject*> resolvedBases;
-		
+
 		std::visit(overload{
 					   [&](const Base::WeightedObjects<std::string>& a_bases) {
 						   resolvedBases = std::move(Base::WeightedObjects<RE::TESBoundObject*>(a_bases));
@@ -125,7 +125,7 @@ namespace Config
 			childObject.bases = childBases;
 
 			auto childFlags = ObjectInstance::GetInstanceFlags(childObject.data, childPrefab->transform, childPrefab->array);
-			
+
 			if (auto arrayTransforms = childPrefab->array.GetTransforms(childPrefab->transform, childHash); !arrayTransforms.empty()) {
 				for (auto&& [arrayIdx, arrayTransform] : std::views::enumerate(arrayTransforms)) {
 					const auto instanceHash = hash::combine(childHash, arrayIdx, childPrefab->array.seed);

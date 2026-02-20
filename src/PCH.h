@@ -13,9 +13,9 @@
 #include <REX/W32/SHELL32.h>
 
 #include <ClibUtil/RNG.hpp>
+#include <ClibUtil/constexpr_map.hpp>
 #include <ClibUtil/distribution.hpp>
 #include <ClibUtil/simpleINI.hpp>
-#include <ClibUtil/constexpr_map.hpp>
 #include <MergeMapperPluginAPI.h>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
