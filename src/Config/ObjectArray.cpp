@@ -117,7 +117,7 @@ namespace Config
 	void ObjectArray::ReadFlags(const std::string& input)
 	{
 		static auto map = clib_util::constexpr_map{ flagArray };
-		
+
 		if (!input.empty()) {
 			const auto flagStrs = string::split(input, "|");
 			for (const auto& flagStr : flagStrs) {
@@ -211,18 +211,16 @@ namespace Config
 			RE::NiPoint3 rotStep{};
 			float        scaleStep{};
 
-			if (incrementTrans || incrementRot || incrementScale) {
-				if (arrayTransforms.size() > 1) {
-					const auto count = arrayTransforms.size() - 1;
-					if (incrementTrans) {
-						transStep = GetTranslateStep(a_pivotRange, count);
-					}
-					if (incrementRot) {
-						rotStep = GetRotationStep(a_pivotRange, count);
-					}
-					if (incrementScale) {
-						scaleStep = a_pivotRange.scale.max != RE::NI_INFINITY ? ((a_pivotRange.scale.max - a_pivotRange.scale.min) / static_cast<float>(count)) : 0.0f;
-					}
+			if (arrayTransforms.size() > 1) {
+				const auto count = arrayTransforms.size() - 1;
+				if (incrementTrans) {
+					transStep = GetTranslateStep(a_pivotRange, count);
+				}
+				if (incrementRot) {
+					rotStep = GetRotationStep(a_pivotRange, count);
+				}
+				if (incrementScale) {
+					scaleStep = a_pivotRange.scale.max != RE::NI_INFINITY ? ((a_pivotRange.scale.max - a_pivotRange.scale.min) / static_cast<float>(count)) : 0.0f;
 				}
 			}
 

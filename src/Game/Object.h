@@ -188,9 +188,10 @@ namespace Game
 		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles, bool a_isTemporary, std::size_t a_parentHash, const std::vector<Object>& a_childObjects = {}) const;
 
 		// members
-		ObjectData            data;
-		Base::WeightedObjects bases;
-		std::vector<Instance> instances;
+		ObjectData                                 data;
+		Base::WeightedObjects<RE::TESBoundObject*> bases;
+		std::vector<Instance>                      instances;
+		std::vector<Object>                        childObjects;
 	};
 
 	class RootObject : public Object
@@ -204,8 +205,7 @@ namespace Game
 		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles) const;
 
 		// members
-		FilterData          filter;
-		std::vector<Object> childObjects;
+		FilterData filter;
 	};
 
 	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::RootObject>>;

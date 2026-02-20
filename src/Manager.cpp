@@ -153,10 +153,7 @@ void Manager::OnDataLoad()
 void Manager::ResolvePrefabs()
 {
 	for (auto& [uuid, prefab] : cachedPrefabs) {
-		prefab.ResolveBasesOnLoad();
-		for (auto& child : prefab.children) {
-			child.ResolveBasesOnLoad();
-		}
+		prefab.Resolve();
 	}
 }
 

@@ -476,7 +476,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 			if (!a_childObjects.empty()) {
 				const Params createdParams(createdRef.get());
 				for (const auto& childObject : a_childObjects) {
-					childObject.SpawnObject(a_dataHandler, createdParams, a_numHandles, a_isTemporary, hash);
+					childObject.SpawnObject(a_dataHandler, createdParams, a_numHandles, a_isTemporary, hash, childObject.childObjects);
 				}
 			}
 		}
@@ -551,8 +551,8 @@ void Game::Format::SpawnAtReference(RE::TESObjectREFR* a_ref)
 
 	const auto base = a_ref->GetBaseObject();
 
-	auto objectsToSpawn = FindObjects(a_ref, base);
-	auto objectsToSpawnFromTypes = FindObjects(base);
+	const auto objectsToSpawn = FindObjects(a_ref, base);
+	const auto objectsToSpawnFromTypes = FindObjects(base);
 
 	if (objectsToSpawn || objectsToSpawnFromTypes) {
 		const auto           dataHandler = RE::TESDataHandler::GetSingleton();

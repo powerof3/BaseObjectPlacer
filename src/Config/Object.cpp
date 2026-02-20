@@ -19,7 +19,7 @@ namespace Config
 	void ObjectData::ReadReferenceFlags(const std::string& input)
 	{
 		static constexpr auto map = clib_util::constexpr_map{ flagArray };
-		
+
 		if (!input.empty()) {
 			const auto flagStrs = string::split(input, "|");
 			for (const auto& flagStr : flagStrs) {
@@ -44,37 +44,52 @@ namespace Config
 		return result;
 	}
 
-	const Base::WeightedObjects& PrefabObject::GetBases() const
+	const Prefab* Prefab::GetPrefabFromVariant(const PrefabOrUUID& a_variant)
 	{
+		const Prefab* prefab = nullptr;
+
+		std::visit(overload{
+					   [&](const Prefab& a_prefab) {
+						   prefab = &a_prefab;
+					   },
+					   [&](const std::string& str) {
+						   prefab = Manager::GetSingleton()->GetPrefab(str);
+						   if (!prefab) {
+							   logger::info("Prefab {} not found, skipping object.", str);
+						   }
+					   } },
+			a_variant);
+
+		return prefab;
+	}
+
+	Base::WeightedObjects<RE::TESBoundObject*> Prefab::GetBaseObjects() const
+	{
+		Base::WeightedObjects<RE::TESBoundObject*> resolvedBases;
+		
+		std::visit(overload{
+					   [&](const Base::WeightedObjects<std::string>& a_bases) {
+						   resolvedBases = std::move(Base::WeightedObjects<RE::TESBoundObject*>(a_bases));
+					   },
+					   [&](const Base::WeightedObjects<RE::TESBoundObject*>& a_bases) {
+						   resolvedBases = a_bases;
+					   } },
+			bases);
+
 		return resolvedBases;
 	}
 
-	Base::WeightedObjects PrefabObject::GetBasesOnDemand() const
+	void Prefab::Resolve()
 	{
-		Base::WeightedObjects checkedBases;
-		checkedBases.reserve(bases.size());
-
-		for (const auto& [base, weight] : bases) {
-			if (const auto form = RE::GetForm(base)) {
-				if (auto obj = form->As<RE::TESBoundObject>()) {
-					checkedBases.emplace_back(obj, weight);
-				} else if (const auto list = form->As<RE::BGSListForm>()) {
-					list->ForEachForm([&](auto* listForm) {
-						if (auto listObj = listForm->As<RE::TESBoundObject>()) {
-							checkedBases.emplace_back(listObj, weight);
-						}
-						return RE::BSContainer::ForEachResult::kContinue;
-					});
-				}
-			}
+		if (const auto basePtr = std::get_if<Base::WeightedObjects<std::string>>(&bases)) {
+			bases = Base::WeightedObjects<RE::TESBoundObject*>(*basePtr);
 		}
 
-		return checkedBases;
-	}
-
-	void PrefabObject::ResolveBasesOnLoad()
-	{
-		resolvedBases = GetBasesOnDemand();
+		for (auto& child : children) {
+			if (const auto prefabPtr = std::get_if<Prefab>(&child)) {
+				prefabPtr->Resolve();
+			}
+		}
 	}
 
 	void Object::GenerateHash()
@@ -85,31 +100,62 @@ namespace Config
 			filter);
 	}
 
+	std::vector<Game::Object> Object::BuildChildObjects(const std::vector<PrefabOrUUID>& a_children, std::size_t a_parentRootHash, const Game::ObjectData& a_parentData)
+	{
+		using ObjectInstance = Game::Object::Instance;
+
+		std::vector<Game::Object> result;
+		result.reserve(a_children.size());
+
+		for (const auto& childVariant : a_children) {
+			auto childPrefab = Prefab::GetPrefabFromVariant(childVariant);
+			if (!childPrefab) {
+				continue;
+			}
+
+			auto childBases = childPrefab->GetBaseObjects();
+			if (childBases.empty()) {
+				continue;
+			}
+
+			const std::size_t childHash = hash::combine(a_parentRootHash, *childPrefab);
+
+			Game::Object childObject(childPrefab->data);
+			childObject.data.Merge(a_parentData);
+			childObject.bases = childBases;
+
+			auto childFlags = ObjectInstance::GetInstanceFlags(childObject.data, childPrefab->transform, childPrefab->array);
+			
+			if (auto arrayTransforms = childPrefab->array.GetTransforms(childPrefab->transform, childHash); !arrayTransforms.empty()) {
+				for (auto&& [arrayIdx, arrayTransform] : std::views::enumerate(arrayTransforms)) {
+					const auto instanceHash = hash::combine(childHash, arrayIdx, childPrefab->array.seed);
+					childObject.instances.emplace_back(childPrefab->transform, arrayTransform, childFlags.get(), instanceHash);
+				}
+			} else {
+				childObject.instances.emplace_back(childPrefab->transform, childFlags.get(), childHash);
+			}
+
+			if (childPrefab->children.empty()) {
+				childObject.childObjects = BuildChildObjects(childPrefab->children, childHash, childObject.data);
+			}
+
+			result.push_back(std::move(childObject));
+		}
+
+		return result;
+	}
+
 	void Object::CreateGameObject(std::vector<Game::RootObject>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const
 	{
 		using ObjectInstance = Game::Object::Instance;
 
-		const Prefab*         resolvedPrefab = nullptr;
-		Base::WeightedObjects resolvedBases;
-		bool                  cachedPrefab = false;
+		const Prefab* resolvedPrefab = Prefab::GetPrefabFromVariant(prefab);
+		if (!resolvedPrefab) {
+			return;
+		}
 
-		std::visit(overload{
-					   [&](const Prefab& a_prefab) {
-						   resolvedPrefab = &a_prefab;
-						   resolvedBases = resolvedPrefab->GetBasesOnDemand();
-					   },
-					   [&](const std::string& str) {
-						   resolvedPrefab = Manager::GetSingleton()->GetPrefab(str);
-						   if (!resolvedPrefab) {
-							   logger::info("Prefab {} not found, skipping object.", str);
-						   } else {
-							   resolvedBases = resolvedPrefab->GetBases();
-							   cachedPrefab = true;
-						   }
-					   } },
-			prefab);
-
-		if (!resolvedPrefab || resolvedBases.empty()) {
+		const auto resolvedBases = resolvedPrefab->GetBaseObjects();
+		if (resolvedBases.empty()) {
 			return;
 		}
 
@@ -122,13 +168,7 @@ namespace Config
 			auto flags = ObjectInstance::GetInstanceFlags(rootObject.data, transformRange, array);
 
 			std::size_t objectHash = hash::combine(rootHash, transformIdx);
-			if (auto arrayTransforms = array.GetTransforms(transformRange, objectHash); arrayTransforms.empty()) {
-				if (!filter.RollChance(objectHash)) {
-					continue;
-				}
-				rootObject.instances.emplace_back(transformRange, flags.get(), objectHash);
-
-			} else {
+			if (auto arrayTransforms = array.GetTransforms(transformRange, objectHash); !arrayTransforms.empty()) {
 				for (auto&& [arrayIdx, arrayTransform] : std::views::enumerate(arrayTransforms)) {
 					objectHash = hash::combine(rootHash, transformIdx, arrayIdx, array.seed);
 					if (!filter.RollChance(objectHash)) {
@@ -136,6 +176,11 @@ namespace Config
 					}
 					rootObject.instances.emplace_back(transformRange, arrayTransform, flags.get(), objectHash);
 				}
+			} else {
+				if (!filter.RollChance(objectHash)) {
+					continue;
+				}
+				rootObject.instances.emplace_back(transformRange, flags.get(), objectHash);
 			}
 		}
 
@@ -151,29 +196,10 @@ namespace Config
 		logger::info("\tGenerated {} instances with {} bases.", rootObject.instances.size(), resolvedBases.size());
 
 		if (!resolvedPrefab->children.empty()) {
-			std::vector<Game::Object> childObjects;
-			childObjects.reserve(resolvedPrefab->children.size());
-			for (const auto& child : resolvedPrefab->children) {
-				auto childBases = cachedPrefab ? child.GetBases() : child.GetBasesOnDemand();
-				if (childBases.empty()) {
-					continue;
-				}
-				const std::size_t childHash = hash::combine(rootHash, child);
-
-				Game::Object childObject(child.data);
-				childObject.data.Merge(rootObject.data);
-				childObject.bases = std::move(childBases);
-
-				auto childFlags = ObjectInstance::GetInstanceFlags(childObject.data, child.transform, array);
-
-				childObject.instances.emplace_back(child.transform, childFlags.get(), childHash);
-				childObjects.push_back(std::move(childObject));
-			}
-			logger::info("\tGenerated {} child objects.", childObjects.size());
-			rootObject.childObjects = std::move(childObjects);
+			rootObject.childObjects = BuildChildObjects(resolvedPrefab->children, rootHash, rootObject.data);
 		}
 
-		rootObject.bases = std::move(resolvedBases);
+		rootObject.bases = resolvedBases;
 		a_objectVec.push_back(std::move(rootObject));
 	}
 }

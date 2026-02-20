@@ -6,6 +6,8 @@
 namespace Game
 {
 	class RootObject;
+	struct ObjectData;
+	class Object;
 }
 
 namespace Config
@@ -65,7 +67,11 @@ namespace Config
 			a_val.flags.underlying());
 	};
 
-	struct PrefabObject
+	struct Prefab;
+
+	using PrefabOrUUID = std::variant<Prefab, std::string>;
+
+	struct Prefab
 	{
 		struct WeightedObject
 		{
@@ -76,32 +82,22 @@ namespace Config
 			GENERATE_HASH(WeightedObject, a_val.object, a_val.weight);
 		};
 
-		const Base::WeightedObjects& GetBases() const;
-		Base::WeightedObjects        GetBasesOnDemand() const;
+		static const Prefab*                       GetPrefabFromVariant(const PrefabOrUUID& a_variant);
+		Base::WeightedObjects<RE::TESBoundObject*> GetBaseObjects() const;
 
-		void ResolveBasesOnLoad();
+		void Resolve();
 
 		// members
-		std::vector<WeightedObject> bases;
+		std::string                 uuid;
+		Base::WeightedObjectVariant bases;
 		RE::BSTransformRange        transform;  // local
 		ObjectData                  data;
+		ObjectArray                 array;
+		std::vector<PrefabOrUUID>   children;
 
 	private:
-		Base::WeightedObjects resolvedBases;
-
-		GENERATE_HASH(PrefabObject, a_val.bases, a_val.transform, a_val.data);
+		GENERATE_HASH(Prefab, a_val.uuid, a_val.bases, a_val.transform, a_val.data, a_val.array, a_val.children);
 	};
-
-	struct Prefab : PrefabObject
-	{
-		std::string               uuid;
-		std::vector<PrefabObject> children;
-
-	private:
-		GENERATE_HASH(Prefab, a_val.bases, a_val.transform, a_val.data, a_val.uuid, a_val.children);
-	};
-
-	using PrefabOrUUID = std::variant<Prefab, std::string>;
 
 	class PrefabList
 	{
@@ -114,8 +110,9 @@ namespace Config
 	class Object
 	{
 	public:
-		void GenerateHash();
-		void CreateGameObject(std::vector<Game::RootObject>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const;
+		void                             GenerateHash();
+		static std::vector<Game::Object> BuildChildObjects(const std::vector<PrefabOrUUID>& a_children, std::size_t a_parentRootHash, const Game::ObjectData& a_parentData);
+		void                             CreateGameObject(std::vector<Game::RootObject>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const;
 
 		// members
 		PrefabOrUUID                      prefab;
@@ -178,9 +175,9 @@ struct glz::meta<Config::FilterData>
 };
 
 template <>
-struct glz::meta<Config::PrefabObject::WeightedObject>
+struct glz::meta<Config::Prefab::WeightedObject>
 {
-	using T = Config::PrefabObject::WeightedObject;
+	using T = Config::Prefab::WeightedObject;
 	static constexpr bool requires_key(std::string_view a_key, bool)
 	{
 		return a_key == "object";
@@ -188,29 +185,6 @@ struct glz::meta<Config::PrefabObject::WeightedObject>
 	static constexpr auto value = object(
 		"object", &T::object,
 		"weight", &T::weight);
-};
-
-template <>
-struct glz::meta<Config::PrefabObject>
-{
-	using T = Config::PrefabObject;
-	static constexpr bool requires_key(std::string_view a_key, bool)
-	{
-		return a_key == "baseObjects";
-	}
-	static constexpr auto read_flags = [](T& s, const std::string& input) {
-		s.data.ReadReferenceFlags(input);
-	};
-	static constexpr auto write_flags = [](auto& s) -> std::string {
-		return s.data.WriteReferenceFlags();
-	};
-	static constexpr auto value = object(
-		"baseObjects", &T::bases,
-		"transform", &T::transform,
-		"flags", glz::custom<read_flags, write_flags>,
-		"motionType", [](auto&& self) -> auto& { return self.data.motionType; },
-		"extraData", [](auto&& self) -> auto& { return self.data.extraData; },
-		"scripts", [](auto&& self) -> auto& { return self.data.scripts; });
 };
 
 template <>
@@ -227,14 +201,33 @@ struct glz::meta<Config::Prefab>
 	static constexpr auto write_flags = [](auto& s) -> std::string {
 		return s.data.WriteReferenceFlags();
 	};
+	static constexpr auto read_bases = [](T& s, const std::vector<Config::Prefab::WeightedObject>& input) {
+		Base::WeightedObjects<std::string> bases;
+		for (auto& [object, weight] : input) {
+			bases.emplace_back(object, weight);
+		};
+		s.bases = std::move(bases);
+	};
+	static constexpr auto write_bases = [](T& s) {
+		std::vector<Config::Prefab::WeightedObject> vec;
+		if (auto ptr = std::get_if<Base::WeightedObjects<std::string>>(&s.bases)) {
+			vec.reserve(ptr->size());
+			for (auto [object, weight] : std::ranges::views::zip(ptr->objects, ptr->weights)) {
+				vec.emplace_back(object, weight);
+			}
+		}
+		return vec;
+	};
+
 	static constexpr auto value = object(
 		"uniqueID", &T::uuid,
-		"baseObjects", &T::bases,
+		"baseObjects", glz::custom<read_bases, write_bases>,
 		"transform", &T::transform,
 		"flags", glz::custom<read_flags, write_flags>,
 		"motionType", [](auto&& self) -> auto& { return self.data.motionType; },
 		"extraData", [](auto&& self) -> auto& { return self.data.extraData; },
 		"scripts", [](auto&& self) -> auto& { return self.data.scripts; },
+		"array", &T::array,
 		"children", &T::children);
 };
 
