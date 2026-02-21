@@ -14,7 +14,7 @@ void Manager::LoadPrefabs()
 	std::string buffer;
 
 	std::vector<std::filesystem::path> paths;
-	
+
 	for (auto i = std::filesystem::recursive_directory_iterator(dir); i != std::filesystem::recursive_directory_iterator(); ++i) {
 		if (i->is_directory() || i->path().extension() != ".json"sv) {
 			continue;
@@ -24,7 +24,7 @@ void Manager::LoadPrefabs()
 
 	std::ranges::sort(paths);
 
-	for (auto& path: paths) {
+	for (auto& path : paths) {
 		logger::info("Reading {}...", path.string());
 		Config::PrefabList prefabList;
 		if (auto err = glz::read_file_json<glz::opts{ .error_on_missing_keys = true }>(prefabList, path.string(), buffer)) {
@@ -111,7 +111,7 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 void Manager::ReloadConfigs()
 {
 	currentConfigHash = 0;
-	
+
 	if (auto [success, errorFound] = ReadConfigs(true); errorFound) {
 		RE::ConsoleLog::GetSingleton()->Print("\tError when parsing configs. See po3_BaseObjectPlacer.log for more information.\nReload skipped.");
 		return;

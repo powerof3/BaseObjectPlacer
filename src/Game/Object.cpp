@@ -62,7 +62,7 @@ bool Game::ObjectFilter::CheckList(const std::vector<FilterEntry>& a_list, const
 					   },
 					   [&](const std::string& a_str) {
 						   matched = MatchString(a_str, input);
-					   }},
+					   } },
 			entry);
 		if (matched) {
 			return true;

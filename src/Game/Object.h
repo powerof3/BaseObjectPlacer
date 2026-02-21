@@ -43,7 +43,7 @@ namespace Game
 
 	private:
 		static void AddTo(std::vector<FilterEntry>& a_filters, const std::vector<std::string>& a_otherFilters);
-		
+
 		static bool CheckList(const std::vector<FilterEntry>& a_list, const Input& input);
 		static bool MatchFormID(RE::FormID a_id, const Input& input);
 		static bool MatchString(const std::string& a_str, const Input& input);
@@ -74,10 +74,10 @@ namespace Game
 		void SetPropertiesHavok(RE::TESObjectREFR* a_ref, RE::NiAVObject* a_root) const;
 
 		// members
-		GameExtraData                                       extraData;
-		BSScript::GameScripts                               scripts;
-		Base::MotionType                                    motionType;
-		REX::EnumSet<ReferenceFlags, std::uint32_t>         flags;
+		GameExtraData                               extraData;
+		BSScript::GameScripts                       scripts;
+		Base::MotionType                            motionType;
+		REX::EnumSet<ReferenceFlags, std::uint32_t> flags;
 
 	private:
 		void SetPropertiesFlags(RE::TESObjectREFR* a_ref) const;
