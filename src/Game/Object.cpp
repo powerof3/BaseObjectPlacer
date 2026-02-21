@@ -322,7 +322,7 @@ Game::Object::Params::RefParams::RefParams(RE::TESObjectREFR* a_ref, std::size_t
 {}
 
 Game::Object::Params::Params(RE::TESObjectREFR* a_ref, std::size_t a_parentHash) :
-	refParams(a_ref,a_parentHash),
+	refParams(a_ref, a_parentHash),
 	ref(a_ref),
 	cell(a_ref->GetParentCell()),
 	worldspace(a_ref->GetWorldspace())
