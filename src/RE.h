@@ -64,7 +64,7 @@ namespace RE
 		// members
 		FormID           id{ 0 };
 		FormID           localID{ 0 };
-		std::string_view modName{};
+		std::string modName{};
 
 	private:
 		GENERATE_HASH(RawFormID,

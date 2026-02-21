@@ -108,12 +108,12 @@ namespace Config
 		result.reserve(a_children.size());
 
 		for (const auto& childVariant : a_children) {
-			auto childPrefab = Prefab::GetPrefabFromVariant(childVariant);
+			const auto childPrefab = Prefab::GetPrefabFromVariant(childVariant);
 			if (!childPrefab) {
 				continue;
 			}
 
-			auto childBases = childPrefab->GetBaseObjects();
+			const auto childBases = childPrefab->GetBaseObjects();
 			if (childBases.empty()) {
 				continue;
 			}
@@ -135,7 +135,7 @@ namespace Config
 				childObject.instances.emplace_back(childPrefab->transform, childFlags.get(), childHash);
 			}
 
-			if (childPrefab->children.empty()) {
+			if (!childPrefab->children.empty()) {
 				childObject.childObjects = BuildChildObjects(childPrefab->children, childHash, childObject.data);
 			}
 

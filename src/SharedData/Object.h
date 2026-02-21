@@ -91,7 +91,22 @@ namespace Base
 		std::vector<float> weights{};
 
 	private:
-		GENERATE_HASH(WeightedObjects, a_val.objects, a_val.weights);
+		[[nodiscard]] friend std::size_t hash_value(const WeightedObjects<std::string>& a_val) noexcept
+			requires std::is_same_v<std::string, T>
+		{
+			return hash::combine(a_val.objects, a_val.weights);
+		}
+
+		[[nodiscard]] friend std::size_t hash_value(const WeightedObjects<RE::TESBoundObject*>& a_val) noexcept
+			requires std::is_same_v<RE::TESBoundObject*, T>
+		{
+			std::size_t seed = 0;
+			for (const auto* obj : a_val.objects) {
+				hash::combine(seed, RE::RawFormID(obj ? obj->GetFormID() : 0));
+			}
+			hash::combine(seed, a_val.weights);
+			return seed;
+		}
 	};
 
 	using WeightedObjectVariant = std::variant<WeightedObjects<std::string>, WeightedObjects<RE::TESBoundObject*>>;

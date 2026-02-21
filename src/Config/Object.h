@@ -46,7 +46,8 @@ namespace Config
 
 	private:
 		static constexpr std::array<std::pair<std::string_view, ReferenceFlags>, 13> flagArray{
-			{ { "InitiallyDisabled"sv, ReferenceFlags::kInitiallyDisabled },
+			{ { "NoAIAcquire"sv, ReferenceFlags::kNoAIAcquire },
+				{ "InitiallyDisabled"sv, ReferenceFlags::kInitiallyDisabled },
 				{ "HiddenFromLocalMap"sv, ReferenceFlags::kHiddenFromLocalMap },
 				{ "Inaccessible"sv, ReferenceFlags::kInaccessible },
 				{ "OpenByDefault"sv, ReferenceFlags::kOpenByDefault },

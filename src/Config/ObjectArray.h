@@ -83,10 +83,10 @@ namespace Config
 		std::vector<RE::BSTransform> GetTransforms(const RE::BSTransformRange& a_pivotRange, std::size_t a_hash) const;
 
 		// members
-		ArrayVariant                       array;
-		std::size_t                        seed;
-		REX::EnumSet<Flags, std::uint32_t> flags;
-		RE::NiPoint3                       rotate;
+		ArrayVariant                       array{};
+		std::size_t                        seed{};
+		REX::EnumSet<Flags, std::uint32_t> flags{};
+		RE::NiPoint3                       rotate{};
 
 	private:
 		static constexpr std::array<std::pair<std::string_view, Flags>, 5> flagArray{
@@ -129,13 +129,16 @@ struct glz::meta<ConfigObjectArray::Radial>
 	{
 		return true;
 	}
+	static constexpr auto limit_count = [](const T&, int count) {
+		return count > 1;
+	};
 	static constexpr auto read_angle = [](ConfigObjectArray::Radial& s, const float input) {
 		s.angle = RE::deg_to_rad(input);
 		s.angleStep = s.angle / static_cast<float>(s.angle == RE::NI_TWO_PI ? s.count : s.count - 1);
 	};
 	static constexpr auto write_angle = [](auto& s) -> auto& { return RE::rad_to_deg(s.angle); };
 	static constexpr auto value = object(
-		"count", &T::count,
+		"count", glz::read_constraint<&T::count, limit_count, "count should be greater than 1">,
 		"angle", glz::custom<read_angle, write_angle>,
 		"radius", &T::radius);
 };

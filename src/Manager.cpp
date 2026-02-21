@@ -17,6 +17,7 @@ void Manager::LoadPrefabs()
 		if (i->is_directory() || i->path().extension() != ".json"sv) {
 			continue;
 		}
+		logger::info("Reading {}...", i->path().string());
 		Config::PrefabList prefabList;
 		if (auto err = glz::read_file_json<glz::opts{ .error_on_missing_keys = true }>(prefabList, i->path().string(), buffer)) {
 			logger::error("\terror:{}", glz::format_error(err, buffer));
@@ -75,12 +76,9 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 
 	for (auto& path : paths) {
 		logger::info("{} {}...", a_reload ? "Reloading" : "Reading", path.string());
-
 		Config::Format tmpConfig;
-
 		glz::error_ctx err{};
-
-		const auto& extension = path.extension();
+		const auto&    extension = path.extension();
 		if (extension == ".json") {
 			err = glz::read_file_json<opts>(tmpConfig, path.string(), buffer);
 		} else if (extension == ".toml") {
@@ -88,7 +86,6 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 		} else if (extension == ".yaml") {
 			//err = glz::read_file_yaml<opts>(tmpConfig, path.string());
 		}
-
 		if (err) {
 			has_error = true;
 			logger::error("\terror:{}", glz::format_error(err, buffer));
@@ -114,9 +111,6 @@ void Manager::ReloadConfigs()
 
 	ResolvePrefabs();
 	ProcessConfigs();
-
-	logger::info("{} objects to be placed", configObjects.size());
-	RE::ConsoleLog::GetSingleton()->Print("\t%u objects to be placed", configObjects.size());
 
 	SKSE::GetTaskInterface()->AddTask([this]() {
 		ClearSavedObjects(true);

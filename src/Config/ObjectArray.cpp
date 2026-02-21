@@ -116,7 +116,7 @@ namespace Config
 
 	void ObjectArray::ReadFlags(const std::string& input)
 	{
-		static auto map = clib_util::constexpr_map{ flagArray };
+		static constexpr auto map = clib_util::constexpr_map{ flagArray };
 
 		if (!input.empty()) {
 			const auto flagStrs = string::split(input, "|");
