@@ -15,10 +15,12 @@ public:
 	void                  LoadPrefabs();
 	std::pair<bool, bool> ReadConfigs(bool a_reload = false);
 	void                  ReloadConfigs();
+	std::size_t           GetCurrentConfigHash() const { return currentConfigHash; }
 
 	void OnDataLoad();
 
 	void                  ResolvePrefabs();
+	void                  StorePrefab(const Config::Prefab& a_prefab);
 	const Config::Prefab* GetPrefab(std::string_view a_uuid) const;
 
 	RE::FormID          GetSavedObject(std::size_t a_hash) const;
@@ -43,7 +45,7 @@ public:
 	void UpdateSerializedObjectHavok(RE::TESObjectREFR* a_ref, RE::NiAVObject* a_root);
 	void SerializeObject(std::size_t hash, const RE::TESObjectREFRPtr& a_ref, bool a_temporary);
 
-	void FinishLoadSerializedObject(RE::TESObjectREFR* a_ref);
+	void FinishLoadSerializedObject(RE::TESObjectREFR* a_ref) const;
 
 private:
 	struct detail
@@ -87,5 +89,6 @@ private:
 	CreatedObjects                            savedObjects;
 	CreatedObjects                            tempObjects;
 	std::optional<std::filesystem::path>      saveDirectory;
+	std::size_t                               currentConfigHash;
 	bool                                      loadingSave{ false };
 };

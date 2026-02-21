@@ -92,9 +92,9 @@ namespace Config
 		}
 	}
 
-	void Object::GenerateHash()
+	std::size_t Object::GenerateRootHash() const
 	{
-		baseHash = hash::combine(
+		return hash::combine(
 			transforms,
 			array,
 			filter);
@@ -107,7 +107,7 @@ namespace Config
 		std::vector<Game::Object> result;
 		result.reserve(a_children.size());
 
-		for (const auto& childVariant : a_children) {
+		for (auto&& [childIdx, childVariant] : std::views::enumerate(a_children)) {
 			const auto childPrefab = Prefab::GetPrefabFromVariant(childVariant);
 			if (!childPrefab) {
 				continue;
@@ -118,7 +118,9 @@ namespace Config
 				continue;
 			}
 
-			const std::size_t childHash = hash::combine(a_parentRootHash, *childPrefab);
+			logger::info("\tProcessing child object with prefab {}", childPrefab->uuid);
+
+			const std::size_t childHash = hash::combine(a_parentRootHash, childIdx, *childPrefab);
 
 			Game::Object childObject(childPrefab->filter, childPrefab->data);
 			childObject.data.Merge(a_parentData);
@@ -140,6 +142,8 @@ namespace Config
 				}
 				childObject.instances.emplace_back(childPrefab->transform, childFlags.get(), childHash);
 			}
+
+			logger::info("\t\tGenerated {} instances with {} bases.", childObject.instances.size(), childBases.size());
 
 			if (!childPrefab->children.empty()) {
 				childObject.childObjects = BuildChildObjects(childPrefab->children, childHash, childObject.data);
@@ -165,10 +169,10 @@ namespace Config
 			return;
 		}
 
-		logger::info("Processing object with prefab {}", resolvedPrefab->uuid);
+		logger::info("\tProcessing root object with prefab {}", resolvedPrefab->uuid);
 
 		Game::RootObject  rootObject(filter, resolvedPrefab->data);
-		const std::size_t rootHash = hash::combine(baseHash, a_attachID, *resolvedPrefab);
+		const std::size_t rootHash = hash::combine(pathHash, a_attachID, GenerateRootHash(), *resolvedPrefab);
 
 		for (auto&& [transformIdx, transformRange] : std::views::enumerate(transforms)) {
 			auto flags = ObjectInstance::GetInstanceFlags(rootObject.data, transformRange, array);
@@ -207,5 +211,10 @@ namespace Config
 
 		rootObject.bases = resolvedBases;
 		a_objectVec.push_back(std::move(rootObject));
+	}
+
+	void Object::SetCurrentPath()
+	{
+		pathHash = Manager::GetSingleton()->GetCurrentConfigHash();
 	}
 }

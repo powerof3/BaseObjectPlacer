@@ -92,13 +92,14 @@ namespace Config
 		std::string                 uuid;
 		Base::WeightedObjectVariant bases;
 		RE::BSTransformRange        transform;  // local
+		std::size_t                 seed{ 0 };
 		ObjectData                  data;
 		ObjectArray                 array;
 		FilterData                  filter;
 		std::vector<PrefabOrUUID>   children;
 
 	private:
-		GENERATE_HASH(Prefab, a_val.uuid, a_val.bases, a_val.transform, a_val.data, a_val.array, a_val.filter, a_val.children);
+		GENERATE_HASH(Prefab, a_val.uuid, a_val.bases, a_val.transform, a_val.seed, a_val.data, a_val.array, a_val.filter, a_val.children);
 	};
 
 	class PrefabList
@@ -112,16 +113,18 @@ namespace Config
 	class Object
 	{
 	public:
-		void                             GenerateHash();
+		std::size_t                      GenerateRootHash() const;
 		static std::vector<Game::Object> BuildChildObjects(const std::vector<PrefabOrUUID>& a_children, std::size_t a_parentRootHash, const Game::ObjectData& a_parentData);
 		void                             CreateGameObject(std::vector<Game::RootObject>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const;
 
+		void SetCurrentPath();
+
 		// members
-		PrefabOrUUID                      prefab;
+		std::size_t                       pathHash;
+		PrefabOrUUID                      prefab{};
 		std::vector<RE::BSTransformRange> transforms;  // global
 		ObjectArray                       array;
 		FilterData                        filter;
-		std::size_t                       baseHash;
 	};
 
 	using ObjectMap = StringMap<std::vector<Object>>;
@@ -225,6 +228,7 @@ struct glz::meta<Config::Prefab>
 		"uniqueID", &T::uuid,
 		"baseObjects", glz::custom<read_bases, write_bases>,
 		"transform", &T::transform,
+		"seed", &T::seed,
 		"flags", glz::custom<read_flags, write_flags>,
 		"motionType", [](auto&& self) -> auto& { return self.data.motionType; },
 		"extraData", [](auto&& self) -> auto& { return self.data.extraData; },
@@ -263,8 +267,31 @@ struct glz::meta<ConfigObject>
 	{
 		return key == "prefab" || key == "transforms";
 	}
+	static constexpr auto check_prefab = [](T& s, const Config::PrefabOrUUID& prefab, glz::context& ctx) {
+		std::visit(overload{
+					   [&](const std::string& a_val) {
+						   if (a_val.empty()) {
+							   ctx.error = glz::error_code::constraint_violated;
+							   ctx.custom_error_message = "prefab cannot have an empty UUID";
+							   return;
+						   }
+						   s.prefab = a_val;
+						   s.SetCurrentPath();
+					   },
+					   [&](const Config::Prefab& a_prefab) {
+						   s.prefab = a_prefab;
+						   s.SetCurrentPath();
+					   },
+				   },
+			prefab);
+	};
+	static constexpr auto read_angle = [](ConfigObjectArray::Radial& s, const float input) {
+		s.angle = RE::deg_to_rad(input);
+		s.angleStep = s.angle / static_cast<float>(s.angle == RE::NI_TWO_PI ? s.count : s.count - 1);
+	};
+	static constexpr auto write_angle = [](auto& s) -> auto& { return RE::rad_to_deg(s.angle); };
 	static constexpr auto value = object(
-		"prefab", &T::prefab,
+		"prefab", glz::custom<check_prefab, &T::prefab>,
 		"transforms", &T::transforms,
 		"array", &T::array,
 		"rules", &T::filter);

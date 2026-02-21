@@ -32,8 +32,8 @@ namespace RE
 		scale(a_ref->GetScale())
 	{
 		extents = boundMax - boundMin;
-		
-		if (a_ref->IsDynamicForm()) {
+
+		if (a_ref->IsDynamicForm() || !CanBeMoved(a_ref)) {
 			pos = a_ref->GetPosition();
 			rot = a_ref->GetAngle();
 		} else {

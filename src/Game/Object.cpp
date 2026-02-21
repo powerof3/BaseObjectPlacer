@@ -12,23 +12,8 @@ Game::ObjectFilter::Input::Input(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_
 
 Game::ObjectFilter::ObjectFilter(const Config::FilterData& a_filter)
 {
-	whiteList.reserve(a_filter.whiteList.size());
-	for (const auto& str : a_filter.whiteList) {
-		if (const auto formID = RE::GetRawFormID(str, true)) {
-			whiteList.emplace_back(formID.id);
-		} else {
-			whiteList.emplace_back(str);
-		}
-	}
-
-	blackList.reserve(a_filter.blackList.size());
-	for (const auto& str : a_filter.blackList) {
-		if (const auto formID = RE::GetRawFormID(str, true)) {
-			blackList.emplace_back(formID.id);
-		} else {
-			blackList.emplace_back(str);
-		}
-	}
+	AddTo(whiteList, a_filter.whiteList);
+	AddTo(blackList, a_filter.blackList);
 }
 
 bool Game::ObjectFilter::IsAllowed(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) const
@@ -48,6 +33,25 @@ bool Game::ObjectFilter::IsAllowed(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* 
 	return true;
 }
 
+void Game::ObjectFilter::AddTo(std::vector<FilterEntry>& a_filters, const std::vector<std::string>& a_otherFilters)
+{
+	a_filters.reserve(a_otherFilters.size());
+	for (const auto& str : a_otherFilters) {
+		if (const auto formID = RE::GetRawFormID(str, true)) {
+			if (const auto list = RE::TESForm::LookupByID<RE::BGSListForm>(formID.id)) {
+				list->ForEachForm([&](auto* form) {
+					a_filters.emplace_back(form->GetFormID());
+					return RE::BSContainer::ForEachResult::kContinue;
+				});
+			} else {
+				a_filters.emplace_back(formID.id);
+			}
+		} else {
+			a_filters.emplace_back(str);
+		}
+	}
+}
+
 bool Game::ObjectFilter::CheckList(const std::vector<FilterEntry>& a_list, const Input& input)
 {
 	for (const auto& entry : a_list) {
@@ -58,7 +62,7 @@ bool Game::ObjectFilter::CheckList(const std::vector<FilterEntry>& a_list, const
 					   },
 					   [&](const std::string& a_str) {
 						   matched = MatchString(a_str, input);
-					   } },
+					   }},
 			entry);
 		if (matched) {
 			return true;
@@ -69,25 +73,7 @@ bool Game::ObjectFilter::CheckList(const std::vector<FilterEntry>& a_list, const
 
 bool Game::ObjectFilter::MatchFormID(RE::FormID a_id, const Input& input)
 {
-	if (input.ref && input.ref->GetFormID() == a_id || input.baseObj && input.baseObj->GetFormID() == a_id || input.cell && input.cell->GetFormID() == a_id) {
-		return true;
-	}
-
-	if (const auto list = RE::TESForm::LookupByID<RE::BGSListForm>(a_id)) {
-		bool hasForm = false;
-		list->ForEachForm([&](auto* form) {
-			if (form == input.ref || form == input.baseObj) {
-				hasForm = true;
-				return RE::BSContainer::ForEachResult::kStop;
-			}
-			return RE::BSContainer::ForEachResult::kContinue;
-		});
-		if (hasForm) {
-			return true;
-		}
-	}
-
-	return false;
+	return (input.ref && input.ref->GetFormID() == a_id) || (input.baseObj && input.baseObj->GetFormID() == a_id) || (input.cell && input.cell->GetFormID() == a_id);
 }
 
 bool Game::ObjectFilter::MatchString(const std::string& a_str, const Input& input)
@@ -117,9 +103,9 @@ bool Game::FilterData::PassesFilters(RE::TESObjectREFR* a_ref, RE::TESObjectCELL
 
 Game::ObjectData::ObjectData(const Config::ObjectData& a_data) :
 	extraData(a_data.extraData),
+	scripts(a_data.scripts.begin(), a_data.scripts.end()),
 	motionType(a_data.motionType),
-	flags(a_data.flags),
-	scripts(a_data.scripts.begin(), a_data.scripts.end())
+	flags(a_data.flags)
 {}
 
 void Game::ObjectData::Merge(const Game::ObjectData& a_parent)
@@ -322,7 +308,7 @@ Game::Object::Params::RefParams::RefParams(RE::TESObjectREFR* a_ref, std::size_t
 {}
 
 Game::Object::Params::Params(RE::TESObjectREFR* a_ref, std::size_t a_parentHash) :
-	refParams(a_ref,a_parentHash),
+	refParams(a_ref, a_parentHash),
 	ref(a_ref),
 	cell(a_ref->GetParentCell()),
 	worldspace(a_ref->GetWorldspace())
@@ -397,7 +383,7 @@ bool Game::Object::IsTemporary() const
 	return data.flags.any(ReferenceFlags::kTemporary) || filter.conditions != nullptr;
 }
 
-void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles, const std::vector<Object>& a_childObjects) const
+void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, Manager* a_mgr, const Params& a_params, std::uint32_t& a_numHandles, const std::vector<Object>& a_childObjects) const
 {
 	auto [refParams, ref, cell, worldSpace] = a_params;
 	auto [refHash, bb] = refParams;
@@ -409,8 +395,6 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 	const auto baseSize = static_cast<std::uint32_t>(bases.size());
 	bool       isTemporary = IsTemporary();
 
-	auto mgr = Manager::GetSingleton();
-
 	for (auto&& [idx, instance] : std::views::enumerate(instances)) {
 		auto hash = instance.hash;
 		if (ref) {
@@ -420,21 +404,21 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 		std::uint32_t baseIndex = 0;
 		if (instance.flags.any(Instance::Flags::kSequentialObjects)) {
 			baseIndex = static_cast<std::uint32_t>(idx % baseSize);
-		} else if (bases.are_weights_equal()) {
+		} else if (bases.flags.any(Base::WeightedObjects<RE::TESBoundObject*>::Flags::kEqualWeights)) {
 			baseIndex = clib_util::RNG(hash).generate<std::uint32_t>(0, baseSize - 1);
 		} else {
 			baseIndex = static_cast<std::uint32_t>(clib_util::WeightedRNG(hash, bases.weights).generate());
 		}
 
 		hash = hash::combine(hash, baseIndex);
-		mgr->AddConfigObject(hash, this);
+		a_mgr->AddConfigObject(hash, this);
 
-		if (auto id = mgr->GetSavedObject(hash); id != 0) {
+		if (auto id = a_mgr->GetSavedObject(hash); id != 0) {
 			logger::info("\t[{:X}]{:X} already exists, skipping spawn.", hash, id);
 			continue;
 		}
 
-		if (a_numHandles >= 1000000 || RE::GetMaxFormIDReached()) {  // max id reached
+		if (a_numHandles >= 1000000 || (a_dataHandler->nextID & 0xFFFFFF) >= 0x3FFFFF) {  // max id reached
 			logger::info("\t[{:X}] Maximum number of handles/FF formIDs reached. Skipping.", hash);
 			continue;
 		}
@@ -475,14 +459,14 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 
 			data.SetProperties(createdRef.get(), hash);
 
-			mgr->SerializeObject(hash, createdRef, isTemporary);
+			a_mgr->SerializeObject(hash, createdRef, isTemporary);
 
 			logger::info("\tSpawning object {:X} with hash {:X}.", createdRef->GetFormID(), hash);
 
 			if (!a_childObjects.empty()) {
 				const Params createdParams(createdRef.get(), hash);
 				for (const auto& childObject : a_childObjects) {
-					childObject.SpawnObject(a_dataHandler, createdParams, a_numHandles, childObject.childObjects);
+					childObject.SpawnObject(a_dataHandler, a_mgr, createdParams, a_numHandles, childObject.childObjects);
 				}
 			}
 		}
@@ -493,9 +477,9 @@ Game::RootObject::RootObject(const Config::FilterData& a_filter, const Config::O
 	Object(a_filter, a_data)
 {}
 
-void Game::RootObject::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles) const
+void Game::RootObject::SpawnObject(RE::TESDataHandler* a_dataHandler, Manager* a_mgr, const Params& a_params, std::uint32_t& a_numHandles) const
 {
-	Object::SpawnObject(a_dataHandler, a_params, a_numHandles, childObjects);
+	Object::SpawnObject(a_dataHandler, a_mgr, a_params, a_numHandles, childObjects);
 }
 
 std::vector<Game::RootObject>* Game::Format::FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base)
@@ -530,11 +514,12 @@ std::vector<Game::RootObject>* Game::Format::FindObjects(const RE::TESBoundObjec
 void Game::Format::SpawnInCell(RE::TESObjectCELL* a_cell)
 {
 	if (const auto it = cells.find(a_cell->GetFormEditorID()); it != cells.end()) {
+		const auto           mgr = Manager::GetSingleton();
 		const auto           dataHandler = RE::TESDataHandler::GetSingleton();
 		const Object::Params objectParams(a_cell);
 		auto                 numHandles = RE::GetNumReferenceHandles();
 		for (const auto& object : it->second) {
-			object.SpawnObject(dataHandler, objectParams, numHandles);
+			object.SpawnObject(dataHandler, mgr, objectParams, numHandles);
 		}
 	}
 }
@@ -551,17 +536,18 @@ void Game::Format::SpawnAtReference(RE::TESObjectREFR* a_ref)
 	const auto objectsToSpawnFromTypes = FindObjects(base);
 
 	if (objectsToSpawn || objectsToSpawnFromTypes) {
+		const auto           mgr = Manager::GetSingleton();
 		const auto           dataHandler = RE::TESDataHandler::GetSingleton();
 		const Object::Params params(a_ref, 0);
 		auto                 numHandles = RE::GetNumReferenceHandles();
 		if (objectsToSpawn) {
 			for (const auto& object : *objectsToSpawn) {
-				object.SpawnObject(dataHandler, params, numHandles);
+				object.SpawnObject(dataHandler, mgr, params, numHandles);
 			}
 		}
 		if (objectsToSpawnFromTypes) {
 			for (const auto& object : *objectsToSpawnFromTypes) {
-				object.SpawnObject(dataHandler, params, numHandles);
+				object.SpawnObject(dataHandler, mgr, params, numHandles);
 			}
 		}
 	}

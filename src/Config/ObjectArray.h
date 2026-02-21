@@ -129,7 +129,7 @@ struct glz::meta<ConfigObjectArray::Radial>
 	{
 		return true;
 	}
-	static constexpr auto limit_count = [](const T&, int count) {
+	static constexpr auto limit_count = [](const T&, std::uint32_t count) {
 		return count > 1;
 	};
 	static constexpr auto read_angle = [](ConfigObjectArray::Radial& s, const float input) {

@@ -2,6 +2,8 @@
 
 #include "SharedData.h"
 
+class Manager;
+
 namespace Config
 {
 	struct ObjectArray;
@@ -40,6 +42,8 @@ namespace Game
 		std::vector<FilterEntry> blackList;
 
 	private:
+		static void AddTo(std::vector<FilterEntry>& a_filters, const std::vector<std::string>& a_otherFilters);
+		
 		static bool CheckList(const std::vector<FilterEntry>& a_list, const Input& input);
 		static bool MatchFormID(RE::FormID a_id, const Input& input);
 		static bool MatchString(const std::string& a_str, const Input& input);
@@ -70,10 +74,10 @@ namespace Game
 		void SetPropertiesHavok(RE::TESObjectREFR* a_ref, RE::NiAVObject* a_root) const;
 
 		// members
-		GameExtraData                               extraData;
-		BSScript::GameScripts                       scripts;
-		Base::MotionType                            motionType;
-		REX::EnumSet<ReferenceFlags, std::uint32_t> flags;
+		GameExtraData                                       extraData;
+		BSScript::GameScripts                               scripts;
+		Base::MotionType                                    motionType;
+		REX::EnumSet<ReferenceFlags, std::uint32_t>         flags;
 
 	private:
 		void SetPropertiesFlags(RE::TESObjectREFR* a_ref) const;
@@ -186,7 +190,7 @@ namespace Game
 
 		bool IsTemporary() const;
 
-		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles, const std::vector<Object>& a_childObjects = {}) const;
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, Manager* a_mgr, const Params& a_params, std::uint32_t& a_numHandles, const std::vector<Object>& a_childObjects = {}) const;
 
 		// members
 		ObjectData                                 data;
@@ -202,7 +206,7 @@ namespace Game
 		RootObject() = default;
 		explicit RootObject(const Config::FilterData& a_filter, const Config::ObjectData& a_data);
 
-		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles) const;
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, Manager* a_mgr, const Params& a_params, std::uint32_t& a_numHandles) const;
 	};
 
 	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::RootObject>>;

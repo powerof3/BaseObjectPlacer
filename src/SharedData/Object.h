@@ -32,6 +32,12 @@ namespace Base
 	template <class T>
 	struct WeightedObjects
 	{
+		enum class Flags
+		{
+			kNone = 0,
+			kEqualWeights = 1 << 0,
+		};
+
 		WeightedObjects() = default;
 		WeightedObjects(const WeightedObjects& other) :
 			objects(other.objects),
@@ -55,6 +61,9 @@ namespace Base
 						});
 					}
 				}
+			}
+			if (are_weights_equal()) {
+				flags.set(Flags::kEqualWeights);
 			}
 		}
 
@@ -81,16 +90,17 @@ namespace Base
 			weights.emplace_back(a_weight);
 		}
 
+		// members
+		std::vector<T>                     objects{};
+		std::vector<float>                 weights{};
+		REX::EnumSet<Flags, std::uint32_t> flags{ Flags::kNone };
+
+	private:
 		bool are_weights_equal() const
 		{
 			return std::ranges::all_of(weights, [&](const auto& w) { return w == weights.front(); });
 		}
 
-		// members
-		std::vector<T>     objects{};
-		std::vector<float> weights{};
-
-	private:
 		[[nodiscard]] friend std::size_t hash_value(const WeightedObjects<std::string>& a_val) noexcept
 			requires std::is_same_v<std::string, T>
 		{

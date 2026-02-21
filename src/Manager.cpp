@@ -13,17 +13,25 @@ void Manager::LoadPrefabs()
 
 	std::string buffer;
 
+	std::vector<std::filesystem::path> paths;
+	
 	for (auto i = std::filesystem::recursive_directory_iterator(dir); i != std::filesystem::recursive_directory_iterator(); ++i) {
 		if (i->is_directory() || i->path().extension() != ".json"sv) {
 			continue;
 		}
-		logger::info("Reading {}...", i->path().string());
+		paths.push_back(i->path());
+	}
+
+	std::ranges::sort(paths);
+
+	for (auto& path: paths) {
+		logger::info("Reading {}...", path.string());
 		Config::PrefabList prefabList;
-		if (auto err = glz::read_file_json<glz::opts{ .error_on_missing_keys = true }>(prefabList, i->path().string(), buffer)) {
+		if (auto err = glz::read_file_json<glz::opts{ .error_on_missing_keys = true }>(prefabList, path.string(), buffer)) {
 			logger::error("\terror:{}", glz::format_error(err, buffer));
 		} else {
 			for (auto& prefab : prefabList.prefabs) {
-				cachedPrefabs.try_emplace(prefab.uuid, prefab);
+				StorePrefab(prefab);
 			}
 		}
 	}
@@ -75,6 +83,7 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 	};
 
 	for (auto& path : paths) {
+		currentConfigHash = hash::combine(path.string());
 		logger::info("{} {}...", a_reload ? "Reloading" : "Reading", path.string());
 		Config::Format tmpConfig;
 		glz::error_ctx err{};
@@ -101,6 +110,8 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 
 void Manager::ReloadConfigs()
 {
+	currentConfigHash = 0;
+	
 	if (auto [success, errorFound] = ReadConfigs(true); errorFound) {
 		RE::ConsoleLog::GetSingleton()->Print("\tError when parsing configs. See po3_BaseObjectPlacer.log for more information.\nReload skipped.");
 		return;
@@ -151,6 +162,23 @@ void Manager::ResolvePrefabs()
 	}
 }
 
+void Manager::StorePrefab(const Config::Prefab& a_prefab)
+{
+	if (a_prefab.uuid.empty()) {
+		logger::error("\tPrefab with empty uuid found, skipping...");
+		return;
+	}
+	logger::info("\tLoading prefab with UUID '{}'", a_prefab.uuid);
+	if (!cachedPrefabs.try_emplace(a_prefab.uuid, a_prefab).second) {
+		logger::error("\t\tDuplicate '{}' UUID found. Discarding.", a_prefab.uuid);
+	}
+	for (auto& childPrefab : a_prefab.children) {
+		if (auto prefabPtr = std::get_if<Config::Prefab>(&childPrefab)) {
+			StorePrefab(*prefabPtr);
+		}
+	}
+}
+
 const Config::Prefab* Manager::GetPrefab(std::string_view a_uuid) const
 {
 	auto it = cachedPrefabs.find(a_uuid);
@@ -176,11 +204,6 @@ void Manager::ProcessConfigs()
 		if (objects.empty()) {
 			continue;
 		}
-
-		for (auto& obj : objects) {
-			obj.GenerateHash();
-		}
-
 		for (const auto& str : string::split(attachStr, ",")) {
 			if (str.empty()) {
 				continue;
@@ -197,16 +220,10 @@ void Manager::ProcessConfigs()
 		if (objects.empty()) {
 			continue;
 		}
-
 		const auto edid = RE::GetEditorID(form);
 		if (edid.empty()) {
 			continue;
 		}
-
-		for (auto& obj : objects) {
-			obj.GenerateHash();
-		}
-
 		process_and_merge(objects, edid, game.cells[edid]);
 	}
 
@@ -214,16 +231,10 @@ void Manager::ProcessConfigs()
 		if (objects.empty()) {
 			continue;
 		}
-
 		const auto formType = RE::StringToFormType(typeStr);
 		if (formType == RE::FormType::None) {
 			continue;
 		}
-
-		for (auto& obj : objects) {
-			obj.GenerateHash();
-		}
-
 		process_and_merge(objects, typeStr, game.objectTypes[formType]);
 	}
 
@@ -451,7 +462,7 @@ void Manager::SerializeObject(std::size_t hash, const RE::TESObjectREFRPtr& a_re
 	}
 }
 
-void Manager::FinishLoadSerializedObject(RE::TESObjectREFR* a_ref)
+void Manager::FinishLoadSerializedObject(RE::TESObjectREFR* a_ref) const
 {
 	if (auto hash = GetSerializedObjectHash(a_ref); hash != 0) {
 		RE::FormID curID = a_ref->GetFormID();

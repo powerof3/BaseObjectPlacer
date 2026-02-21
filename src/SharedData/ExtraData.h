@@ -273,8 +273,7 @@ namespace Extra
 			encounterZone(other.encounterZone),
 			ownership(other.ownership),
 			displayName(other.displayName),
-			count(other.count),
-			charge(other.charge)
+			count(other.count)
 		{}
 		ExtraData(const ExtraData<std::string>& other)
 			requires std::is_same_v<RE::FormID, T>
@@ -286,8 +285,7 @@ namespace Extra
 			encounterZone(RE::GetFormID(other.encounterZone)),
 			ownership(RE::GetFormID(other.ownership)),
 			displayName(other.displayName),
-			count(other.count),
-			charge(other.charge)
+			count(other.count)
 		{
 			linkedRefs.reserve(other.linkedRefs.size());
 			for (const auto& linkedRef : other.linkedRefs) {
@@ -320,13 +318,6 @@ namespace Extra
 				//a_ref->AddChange(RE::TESObjectREFR::ChangeFlags::kItemExtraData); // persists even without change flag
 			}
 
-			// ??
-			if (charge > 0.0f) {
-				auto xData = new RE::ExtraCharge();
-				xData->charge = charge;
-				a_ref->extraList.Add(xData);
-			}
-
 			activateParents.AddExtraData(a_ref);
 			enableStateParent.AddExtraData(a_ref);
 			teleport.AddExtraData(a_ref);
@@ -352,9 +343,6 @@ namespace Extra
 			if (count.min == 0) {
 				count = a_source.count;
 			}*/
-			if (charge == 0.0f) {
-				charge = a_source.charge;
-			}
 			if (activateParents.none()) {
 				activateParents = a_source.activateParents;
 			}
@@ -382,7 +370,6 @@ namespace Extra
 		T                         ownership{};
 		std::string               displayName{};
 		RE::Range<std::uint32_t>  count{};
-		float                     charge{};
 
 	private:
 		GENERATE_HASH(ExtraData,
@@ -394,8 +381,7 @@ namespace Extra
 			a_val.encounterZone,
 			a_val.ownership,
 			a_val.displayName,
-			a_val.count,
-			a_val.charge)
+			a_val.count)
 	};
 }
 
@@ -498,6 +484,5 @@ struct glz::meta<ConfigExtraData>
 		"teleport", &T::teleport,
 		"lock", &T::lock,
 		"displayName", &T::displayName,
-		"count", &T::count,
-		"charge", &T::charge);
+		"count", &T::count);
 };
