@@ -316,14 +316,13 @@ void Game::ObjectData::AttachScripts(RE::TESObjectREFR* a_ref) const
 	}
 }
 
-Game::Object::Params::RefParams::RefParams(RE::TESObjectREFR* a_ref) :
-	id(a_ref->GetFormID()),
-	bb(a_ref),
-	scale(a_ref->GetScale())
+Game::Object::Params::RefParams::RefParams(RE::TESObjectREFR* a_ref, std::size_t a_parentHash) :
+	hash(a_parentHash == 0 ? hash::combine(RE::RawFormID(a_ref->GetFormID())) : a_parentHash),
+	bb(a_ref)
 {}
 
-Game::Object::Params::Params(RE::TESObjectREFR* a_ref) :
-	refParams(a_ref),
+Game::Object::Params::Params(RE::TESObjectREFR* a_ref, std::size_t a_parentHash) :
+	refParams(a_ref,a_parentHash),
 	ref(a_ref),
 	cell(a_ref->GetParentCell()),
 	worldspace(a_ref->GetWorldspace())
@@ -388,27 +387,34 @@ RE::BSTransform Game::Object::Instance::GetWorldTransform(const RE::NiPoint3& a_
 	return newTransform;
 }
 
-Game::Object::Object(const Config::ObjectData& a_data) :
-	data(a_data)
+Game::Object::Object(const Config::FilterData& a_filter, const Config::ObjectData& a_data) :
+	data(a_data),
+	filter(a_filter)
 {}
 
-void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles, bool a_isTemporary, std::size_t a_parentHash, const std::vector<Object>& a_childObjects) const
+bool Game::Object::IsTemporary() const
+{
+	return data.flags.any(ReferenceFlags::kTemporary) || filter.conditions != nullptr;
+}
+
+void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles, const std::vector<Object>& a_childObjects) const
 {
 	auto [refParams, ref, cell, worldSpace] = a_params;
+	auto [refHash, bb] = refParams;
+
+	if (!filter.PassesFilters(a_params.ref, a_params.cell)) {
+		return;
+	}
 
 	const auto baseSize = static_cast<std::uint32_t>(bases.size());
-	const auto refAngle = ref ? ref->GetAngle() : RE::NiPoint3();
+	bool       isTemporary = IsTemporary();
 
 	auto mgr = Manager::GetSingleton();
 
 	for (auto&& [idx, instance] : std::views::enumerate(instances)) {
 		auto hash = instance.hash;
 		if (ref) {
-			if (a_parentHash != 0 || ref->IsDynamicForm()) {
-				hash = hash::combine(instance.hash, a_parentHash);
-			} else {
-				hash = hash::combine(instance.hash, refParams.id);
-			}
+			hash = hash::combine(instance.hash, refHash);
 		}
 
 		std::uint32_t baseIndex = 0;
@@ -436,14 +442,14 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 		a_numHandles++;
 
 		const auto baseObject = bases.objects[baseIndex];
-		auto       transform = instance.GetWorldTransform(refParams.bb.pos, refAngle, hash);
+		auto       transform = instance.GetWorldTransform(bb.pos, bb.rot, hash);
 		if (ref && data.PreventClipping(baseObject)) {
 			RE::NiPoint3 baseObjectExtents{
 				static_cast<float>(baseObject->boundData.boundMax.x - baseObject->boundData.boundMin.x),
 				static_cast<float>(baseObject->boundData.boundMax.y - baseObject->boundData.boundMin.y),
 				static_cast<float>(baseObject->boundData.boundMax.z - baseObject->boundData.boundMin.z)
 			};
-			transform.ValidatePosition(cell, ref, refParams.bb, baseObjectExtents);
+			transform.ValidatePosition(cell, ref, bb, baseObjectExtents);
 		}
 
 		auto createdRefHandle = a_dataHandler->CreateReferenceAtLocation(
@@ -461,7 +467,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 		if (auto createdRef = createdRefHandle.get()) {
 			if (float scale = transform.scale; scale != 1.0f) {
 				if (instance.flags.any(Instance::Flags::kRelativeScale)) {
-					scale *= refParams.scale;
+					scale *= bb.scale;
 				}
 				createdRef->SetScale(scale);
 				createdRef->AddChange(RE::TESObjectREFR::ChangeFlags::kScale);
@@ -469,14 +475,14 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 
 			data.SetProperties(createdRef.get(), hash);
 
-			mgr->SerializeObject(hash, createdRef, a_isTemporary);
+			mgr->SerializeObject(hash, createdRef, isTemporary);
 
 			logger::info("\tSpawning object {:X} with hash {:X}.", createdRef->GetFormID(), hash);
 
 			if (!a_childObjects.empty()) {
-				const Params createdParams(createdRef.get());
+				const Params createdParams(createdRef.get(), hash);
 				for (const auto& childObject : a_childObjects) {
-					childObject.SpawnObject(a_dataHandler, createdParams, a_numHandles, a_isTemporary, hash, childObject.childObjects);
+					childObject.SpawnObject(a_dataHandler, createdParams, a_numHandles, childObject.childObjects);
 				}
 			}
 		}
@@ -484,22 +490,12 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& 
 }
 
 Game::RootObject::RootObject(const Config::FilterData& a_filter, const Config::ObjectData& a_data) :
-	Object(a_data),
-	filter(a_filter)
+	Object(a_filter, a_data)
 {}
-
-bool Game::RootObject::IsTemporary() const
-{
-	return data.flags.any(ReferenceFlags::kTemporary) || filter.conditions != nullptr;
-}
 
 void Game::RootObject::SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles) const
 {
-	if (!filter.PassesFilters(a_params.ref, a_params.cell)) {
-		return;
-	}
-
-	Object::SpawnObject(a_dataHandler, a_params, a_numHandles, IsTemporary(), 0, childObjects);
+	Object::SpawnObject(a_dataHandler, a_params, a_numHandles, childObjects);
 }
 
 std::vector<Game::RootObject>* Game::Format::FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base)
@@ -556,7 +552,7 @@ void Game::Format::SpawnAtReference(RE::TESObjectREFR* a_ref)
 
 	if (objectsToSpawn || objectsToSpawnFromTypes) {
 		const auto           dataHandler = RE::TESDataHandler::GetSingleton();
-		const Object::Params params(a_ref);
+		const Object::Params params(a_ref, 0);
 		auto                 numHandles = RE::GetNumReferenceHandles();
 		if (objectsToSpawn) {
 			for (const auto& object : *objectsToSpawn) {

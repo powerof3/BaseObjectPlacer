@@ -120,7 +120,7 @@ namespace Config
 
 			const std::size_t childHash = hash::combine(a_parentRootHash, *childPrefab);
 
-			Game::Object childObject(childPrefab->data);
+			Game::Object childObject(childPrefab->filter, childPrefab->data);
 			childObject.data.Merge(a_parentData);
 			childObject.bases = childBases;
 
@@ -129,9 +129,15 @@ namespace Config
 			if (auto arrayTransforms = childPrefab->array.GetTransforms(childPrefab->transform, childHash); !arrayTransforms.empty()) {
 				for (auto&& [arrayIdx, arrayTransform] : std::views::enumerate(arrayTransforms)) {
 					const auto instanceHash = hash::combine(childHash, arrayIdx, childPrefab->array.seed);
+					if (!childPrefab->filter.RollChance(instanceHash)) {
+						continue;
+					}
 					childObject.instances.emplace_back(childPrefab->transform, arrayTransform, childFlags.get(), instanceHash);
 				}
 			} else {
+				if (!childPrefab->filter.RollChance(childHash)) {
+					continue;
+				}
 				childObject.instances.emplace_back(childPrefab->transform, childFlags.get(), childHash);
 			}
 

@@ -53,7 +53,7 @@ namespace Game
 		bool PassesFilters(RE::TESObjectREFR* a_ref, RE::TESObjectCELL* a_cell) const;
 
 		// members
-		std::shared_ptr<RE::TESCondition> conditions;
+		std::unique_ptr<RE::TESCondition> conditions;
 		ObjectFilter                      filter;
 	};
 
@@ -137,15 +137,14 @@ namespace Game
 			struct RefParams
 			{
 				RefParams() = default;
-				RefParams(RE::TESObjectREFR* a_ref);
+				RefParams(RE::TESObjectREFR* a_ref, std::size_t a_parentHash);
 
 				// members
-				RE::RawFormID   id;
+				std::size_t     hash;
 				RE::BoundingBox bb;
-				float           scale;
 			};
 
-			Params(RE::TESObjectREFR* a_ref);
+			Params(RE::TESObjectREFR* a_ref, std::size_t a_parentHash);
 			Params(RE::TESObjectCELL* a_cell);
 
 			// members
@@ -183,12 +182,15 @@ namespace Game
 		};
 
 		Object() = default;
-		explicit Object(const Config::ObjectData& a_data);
+		explicit Object(const Config::FilterData& a_filter, const Config::ObjectData& a_data);
 
-		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles, bool a_isTemporary, std::size_t a_parentHash, const std::vector<Object>& a_childObjects = {}) const;
+		bool IsTemporary() const;
+
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles, const std::vector<Object>& a_childObjects = {}) const;
 
 		// members
 		ObjectData                                 data;
+		FilterData                                 filter;
 		Base::WeightedObjects<RE::TESBoundObject*> bases;
 		std::vector<Instance>                      instances;
 		std::vector<Object>                        childObjects;
@@ -200,12 +202,7 @@ namespace Game
 		RootObject() = default;
 		explicit RootObject(const Config::FilterData& a_filter, const Config::ObjectData& a_data);
 
-		bool IsTemporary() const;
-
 		void SpawnObject(RE::TESDataHandler* a_dataHandler, const Params& a_params, std::uint32_t& a_numHandles) const;
-
-		// members
-		FilterData filter;
 	};
 
 	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::RootObject>>;

@@ -26,12 +26,20 @@ namespace RE
 		};
 	}
 
-	BoundingBox::BoundingBox(const TESObjectREFR* a_ref) :
-		pos(a_ref->GetPosition()),
+	BoundingBox::BoundingBox(TESObjectREFR* a_ref) :
 		boundMin(a_ref->GetBoundMin()),
-		boundMax(a_ref->GetBoundMax())
+		boundMax(a_ref->GetBoundMax()),
+		scale(a_ref->GetScale())
 	{
 		extents = boundMax - boundMin;
+		
+		if (a_ref->IsDynamicForm()) {
+			pos = a_ref->GetPosition();
+			rot = a_ref->GetAngle();
+		} else {
+			TESForm* world = nullptr;
+			a_ref->GetEditorLocation2(pos, rot, world, nullptr);
+		}
 	}
 
 	bool BSTransform::operator==(const BSTransform& a_rhs) const

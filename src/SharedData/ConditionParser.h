@@ -9,7 +9,7 @@ using PARAMS = std::pair<std::optional<PARAM_TYPE>, std::optional<PARAM_TYPE>>;
 class ConditionParser
 {
 public:
-	static std::shared_ptr<RE::TESCondition> BuildCondition(const std::vector<std::string>& a_conditionList);
+	static std::unique_ptr<RE::TESCondition> BuildCondition(const std::vector<std::string>& a_conditionList);
 
 private:
 	union VOID_PARAM

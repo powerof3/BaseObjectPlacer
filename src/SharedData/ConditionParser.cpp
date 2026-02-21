@@ -723,11 +723,11 @@ bool ConditionParser::ParseVoidParam(const std::string& a_str, VOID_PARAM& a_par
 	return true;
 }
 
-std::shared_ptr<RE::TESCondition> ConditionParser::BuildCondition(const std::vector<std::string>& a_conditionList)
+std::unique_ptr<RE::TESCondition> ConditionParser::BuildCondition(const std::vector<std::string>& a_conditionList)
 {
 	static srell::regex condRegex{ R"((\w+)?\s*(\w+)\s+(\w+)(?:\s+(\w+))?\s*([=!<>]+)\s*([\d.]+)\s*(AND|OR)?)" };
 
-	auto conditionPtr = std::make_shared<RE::TESCondition>();
+	auto conditionPtr = std::make_unique<RE::TESCondition>();
 	bool addedCondition = false;
 
 	for (auto& condition : a_conditionList) {
@@ -835,5 +835,5 @@ std::shared_ptr<RE::TESCondition> ConditionParser::BuildCondition(const std::vec
 		addedCondition = true;
 	}
 
-	return addedCondition ? conditionPtr : nullptr;
+	return addedCondition ? std::move(conditionPtr) : nullptr;
 }

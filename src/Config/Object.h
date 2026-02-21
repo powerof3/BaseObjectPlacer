@@ -94,10 +94,11 @@ namespace Config
 		RE::BSTransformRange        transform;  // local
 		ObjectData                  data;
 		ObjectArray                 array;
+		FilterData                  filter;
 		std::vector<PrefabOrUUID>   children;
 
 	private:
-		GENERATE_HASH(Prefab, a_val.uuid, a_val.bases, a_val.transform, a_val.data, a_val.array, a_val.children);
+		GENERATE_HASH(Prefab, a_val.uuid, a_val.bases, a_val.transform, a_val.data, a_val.array, a_val.filter, a_val.children);
 	};
 
 	class PrefabList
@@ -228,6 +229,7 @@ struct glz::meta<Config::Prefab>
 		"motionType", [](auto&& self) -> auto& { return self.data.motionType; },
 		"extraData", [](auto&& self) -> auto& { return self.data.extraData; },
 		"scripts", [](auto&& self) -> auto& { return self.data.scripts; },
+		"rules", &T::filter,
 		"array", &T::array,
 		"children", &T::children);
 };

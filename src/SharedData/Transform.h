@@ -77,12 +77,14 @@ namespace RE
 	struct BoundingBox
 	{
 		BoundingBox() = default;
-		BoundingBox(const TESObjectREFR* a_ref);
+		BoundingBox(TESObjectREFR* a_ref);
 
 		NiPoint3 pos;
+		NiPoint3 rot;
 		NiPoint3 boundMin;
 		NiPoint3 boundMax;
 		NiPoint3 extents;
+		float    scale;
 	};
 
 	class BSTransform
