@@ -62,8 +62,8 @@ namespace RE
 		}
 
 		// members
-		FormID           id{ 0 };
-		FormID           localID{ 0 };
+		FormID      id{ 0 };
+		FormID      localID{ 0 };
 		std::string modName{};
 
 	private:
