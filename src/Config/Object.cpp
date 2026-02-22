@@ -128,19 +128,24 @@ namespace Config
 
 			auto childFlags = ObjectInstance::GetInstanceFlags(childObject.data, childPrefab->transform, childPrefab->array);
 
+			std::shared_ptr<RE::BSTransformRange> transformRangePtr{};
+			if (childFlags.any(ObjectInstance::Flags::kRandomizeRotation, ObjectInstance::Flags::kRandomizeScale)) {
+				transformRangePtr = std::make_shared<RE::BSTransformRange>(childPrefab->transform);
+			}
+
 			if (auto arrayTransforms = childPrefab->array.GetTransforms(childPrefab->transform, childHash); !arrayTransforms.empty()) {
 				for (auto&& [arrayIdx, arrayTransform] : std::views::enumerate(arrayTransforms)) {
 					const auto instanceHash = hash::combine(childHash, arrayIdx, childPrefab->array.seed);
 					if (!childPrefab->filter.RollChance(instanceHash)) {
 						continue;
 					}
-					childObject.instances.emplace_back(childPrefab->transform, arrayTransform, childFlags.get(), instanceHash);
+					childObject.instances.emplace_back(transformRangePtr, arrayTransform, childFlags.get(), instanceHash);
 				}
 			} else {
 				if (!childPrefab->filter.RollChance(childHash)) {
 					continue;
 				}
-				childObject.instances.emplace_back(childPrefab->transform, childFlags.get(), childHash);
+				childObject.instances.emplace_back(transformRangePtr, childFlags.get(), childHash);
 			}
 
 			logger::info("\t\tGenerated {} instances with {} bases.", childObject.instances.size(), childBases.size());
@@ -155,7 +160,7 @@ namespace Config
 		return result;
 	}
 
-	void Object::CreateGameObject(std::vector<Game::RootObject>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const
+	void Object::CreateGameObject(std::vector<Game::Object>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const
 	{
 		using ObjectInstance = Game::Object::Instance;
 
@@ -171,11 +176,16 @@ namespace Config
 
 		logger::info("\tProcessing root object with prefab {}", resolvedPrefab->uuid);
 
-		Game::RootObject  rootObject(filter, resolvedPrefab->data);
+		Game::Object  rootObject(filter, resolvedPrefab->data);
 		const std::size_t rootHash = hash::combine(pathHash, a_attachID, GenerateRootHash(), *resolvedPrefab);
 
 		for (auto&& [transformIdx, transformRange] : std::views::enumerate(transforms)) {
 			auto flags = ObjectInstance::GetInstanceFlags(rootObject.data, transformRange, array);
+
+			std::shared_ptr<RE::BSTransformRange> transformRangePtr{};
+			if (flags.any(ObjectInstance::Flags::kRandomizeRotation, ObjectInstance::Flags::kRandomizeScale)) {
+				transformRangePtr = std::make_shared<RE::BSTransformRange>(transformRange);
+			}
 
 			std::size_t objectHash = hash::combine(rootHash, transformIdx);
 			if (auto arrayTransforms = array.GetTransforms(transformRange, objectHash); !arrayTransforms.empty()) {
@@ -184,13 +194,13 @@ namespace Config
 					if (!filter.RollChance(objectHash)) {
 						continue;
 					}
-					rootObject.instances.emplace_back(transformRange, arrayTransform, flags.get(), objectHash);
+					rootObject.instances.emplace_back(transformRangePtr, arrayTransform, flags.get(), objectHash);
 				}
 			} else {
 				if (!filter.RollChance(objectHash)) {
 					continue;
 				}
-				rootObject.instances.emplace_back(transformRange, flags.get(), objectHash);
+				rootObject.instances.emplace_back(transformRangePtr, flags.get(), objectHash);
 			}
 		}
 

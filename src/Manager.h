@@ -89,6 +89,6 @@ private:
 	CreatedObjects                            savedObjects;
 	CreatedObjects                            tempObjects;
 	std::optional<std::filesystem::path>      saveDirectory;
-	std::size_t                               currentConfigHash;
+	std::size_t                               currentConfigHash{0};
 	bool                                      loadingSave{ false };
 };

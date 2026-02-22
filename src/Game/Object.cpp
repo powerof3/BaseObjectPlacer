@@ -114,18 +114,22 @@ void Game::ObjectData::Merge(const Game::ObjectData& a_parent)
 		motionType = a_parent.motionType;
 	}
 
-	if (flags.any(ReferenceFlags::kInheritFlags)) {
+	const auto& originalFlags = flags;
+
+	if (originalFlags.any(ReferenceFlags::kInheritFlags)) {
 		flags = a_parent.flags;
 	}
 
-	if (flags.any(ReferenceFlags::kInheritExtraData)) {
+	if (originalFlags.any(ReferenceFlags::kInheritExtraData)) {
 		extraData.Merge(a_parent.extraData);
 	}
 
-	if (flags.any(ReferenceFlags::kInheritScripts) && !a_parent.scripts.empty()) {
+	if (originalFlags.any(ReferenceFlags::kInheritScripts) && !a_parent.scripts.empty()) {
 		scripts.reserve(a_parent.scripts.size());
 		for (const auto& script : a_parent.scripts) {
-			scripts.emplace_back(script);
+			if (std::ranges::find(scripts, script) == scripts.end()) {
+				scripts.emplace_back(script);
+			}
 		}
 	}
 }
@@ -320,15 +324,15 @@ Game::Object::Params::Params(RE::TESObjectCELL* a_cell) :
 	worldspace(a_cell->worldSpace)
 {}
 
-Game::Object::Instance::Instance(const RE::BSTransformRange& a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash) :
+Game::Object::Instance::Instance(std::shared_ptr<RE::BSTransformRange> a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash) :
 	transform(a_transform),
 	transformRange(a_range),
 	flags(a_flags),
 	hash(a_hash)
 {}
 
-Game::Object::Instance::Instance(const RE::BSTransformRange& a_range, Flags a_flags, std::size_t a_hash) :
-	transform(a_range, a_hash),
+Game::Object::Instance::Instance(std::shared_ptr<RE::BSTransformRange> a_range, Flags a_flags, std::size_t a_hash) :
+	transform(*a_range, a_hash),
 	transformRange(a_range),
 	flags(a_flags),
 	hash(a_hash)
@@ -340,10 +344,10 @@ REX::EnumSet<Game::Object::Instance::Flags> Game::Object::Instance::GetInstanceF
 	if (a_data.flags.any(ReferenceFlags::kSequentialObjects)) {
 		flags.set(Flags::kSequentialObjects);
 	}
-	if (a_range.rotate.relative) {
+	if (a_range.flags.any(RE::BSTransformRange::Flags::kRelativeRotation)) {
 		flags.set(Flags::kRelativeRotation);
 	}
-	if (a_range.scale.relative) {
+	if (a_range.flags.any(RE::BSTransformRange::Flags::kRelativeScale)) {
 		flags.set(Flags::kRelativeScale);
 	}
 	if (a_array.flags.any(Config::ObjectArray::Flags::kRandomizeRotation)) {
@@ -359,16 +363,16 @@ RE::BSTransform Game::Object::Instance::GetWorldTransform(const RE::NiPoint3& a_
 {
 	RE::BSTransform newTransform = transform;
 	newTransform.translate += a_refPos;
-	if (flags.any(Flags::kRandomizeRotation)) {
-		newTransform.rotate = transformRange.rotate.value(a_hash);
+	if (flags.any(Flags::kRandomizeRotation) && transformRange) {
+		newTransform.rotate = transformRange->rotate.value(a_hash);
 		RE::WrapAngle(newTransform.rotate);
 	}
 	if (flags.any(Flags::kRelativeRotation)) {
 		newTransform.rotate += a_refAngle;
 		RE::WrapAngle(newTransform.rotate);
 	}
-	if (flags.any(Flags::kRandomizeScale)) {
-		newTransform.scale = transformRange.scale.value(a_hash);
+	if (flags.any(Flags::kRandomizeScale) && transformRange) {
+		newTransform.scale = transformRange->scale.value(a_hash);
 	}
 	return newTransform;
 }
@@ -473,16 +477,7 @@ void Game::Object::SpawnObject(RE::TESDataHandler* a_dataHandler, Manager* a_mgr
 	}
 }
 
-Game::RootObject::RootObject(const Config::FilterData& a_filter, const Config::ObjectData& a_data) :
-	Object(a_filter, a_data)
-{}
-
-void Game::RootObject::SpawnObject(RE::TESDataHandler* a_dataHandler, Manager* a_mgr, const Params& a_params, std::uint32_t& a_numHandles) const
-{
-	Object::SpawnObject(a_dataHandler, a_mgr, a_params, a_numHandles, childObjects);
-}
-
-std::vector<Game::RootObject>* Game::Format::FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base)
+std::vector<Game::Object>* Game::Format::FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base)
 {
 	if (const auto it = objects.find(a_ref->GetFormID()); it != objects.end()) {
 		return &it->second;
@@ -498,7 +493,7 @@ std::vector<Game::RootObject>* Game::Format::FindObjects(const RE::TESObjectREFR
 	return nullptr;
 }
 
-std::vector<Game::RootObject>* Game::Format::FindObjects(const RE::TESBoundObject* a_base)
+std::vector<Game::Object>* Game::Format::FindObjects(const RE::TESBoundObject* a_base)
 {
 	if (!a_base) {
 		return nullptr;
@@ -519,7 +514,7 @@ void Game::Format::SpawnInCell(RE::TESObjectCELL* a_cell)
 		const Object::Params objectParams(a_cell);
 		auto                 numHandles = RE::GetNumReferenceHandles();
 		for (const auto& object : it->second) {
-			object.SpawnObject(dataHandler, mgr, objectParams, numHandles);
+			object.SpawnObject(dataHandler, mgr, objectParams, numHandles, object.childObjects);
 		}
 	}
 }
@@ -542,12 +537,12 @@ void Game::Format::SpawnAtReference(RE::TESObjectREFR* a_ref)
 		auto                 numHandles = RE::GetNumReferenceHandles();
 		if (objectsToSpawn) {
 			for (const auto& object : *objectsToSpawn) {
-				object.SpawnObject(dataHandler, mgr, params, numHandles);
+				object.SpawnObject(dataHandler, mgr, params, numHandles, object.childObjects);
 			}
 		}
 		if (objectsToSpawnFromTypes) {
 			for (const auto& object : *objectsToSpawnFromTypes) {
-				object.SpawnObject(dataHandler, mgr, params, numHandles);
+				object.SpawnObject(dataHandler, mgr, params, numHandles, object.childObjects);
 			}
 		}
 	}

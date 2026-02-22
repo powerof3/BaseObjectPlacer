@@ -114,6 +114,11 @@ namespace Config
 		}
 	}
 
+	void ObjectArray::Word::ClearCharMap()
+	{
+		charMap.clear();
+	}
+
 	void ObjectArray::ReadFlags(const std::string& input)
 	{
 		static constexpr auto map = clib_util::constexpr_map{ flagArray };

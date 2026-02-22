@@ -5,7 +5,6 @@
 
 namespace Game
 {
-	class RootObject;
 	struct ObjectData;
 	class Object;
 }
@@ -115,7 +114,7 @@ namespace Config
 	public:
 		std::size_t                      GenerateRootHash() const;
 		static std::vector<Game::Object> BuildChildObjects(const std::vector<PrefabOrUUID>& a_children, std::size_t a_parentRootHash, const Game::ObjectData& a_parentData);
-		void                             CreateGameObject(std::vector<Game::RootObject>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const;
+		void                             CreateGameObject(std::vector<Game::Object>& a_objectVec, const std::variant<RE::RawFormID, std::string_view>& a_attachID) const;
 
 		void SetCurrentPath();
 
@@ -210,7 +209,7 @@ struct glz::meta<Config::Prefab>
 		Base::WeightedObjects<std::string> bases;
 		for (auto& [object, weight] : input) {
 			bases.emplace_back(object, weight);
-		};
+		}
 		s.bases = std::move(bases);
 	};
 	static constexpr auto write_bases = [](T& s) {

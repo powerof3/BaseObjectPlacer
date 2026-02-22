@@ -171,18 +171,18 @@ namespace Game
 			};
 
 			Instance() = default;
-			Instance(const RE::BSTransformRange& a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash);
-			Instance(const RE::BSTransformRange& a_range, Flags a_flags, std::size_t a_hash);
+			Instance(std::shared_ptr<RE::BSTransformRange> a_range, const RE::BSTransform& a_transform, Flags a_flags, std::size_t a_hash);
+			Instance(std::shared_ptr<RE::BSTransformRange> a_range, Flags a_flags, std::size_t a_hash);
 
 			static REX::EnumSet<Flags> GetInstanceFlags(const Game::ObjectData& a_data, const RE::BSTransformRange& a_range, const Config::ObjectArray& a_array);
 
 			RE::BSTransform GetWorldTransform(const RE::NiPoint3& a_refPos, const RE::NiPoint3& a_refAngle, std::size_t a_hash) const;
 
 			// members
-			RE::BSTransform                    transform;
-			RE::BSTransformRange               transformRange;
-			REX::EnumSet<Flags, std::uint32_t> flags;
-			std::size_t                        hash;
+			RE::BSTransform                       transform;
+			std::shared_ptr<RE::BSTransformRange> transformRange;
+			REX::EnumSet<Flags, std::uint32_t>    flags;
+			std::size_t                           hash;
 		};
 
 		Object() = default;
@@ -190,7 +190,7 @@ namespace Game
 
 		bool IsTemporary() const;
 
-		void SpawnObject(RE::TESDataHandler* a_dataHandler, Manager* a_mgr, const Params& a_params, std::uint32_t& a_numHandles, const std::vector<Object>& a_childObjects = {}) const;
+		void SpawnObject(RE::TESDataHandler* a_dataHandler, Manager* a_mgr, const Params& a_params, std::uint32_t& a_numHandles, const std::vector<Object>& a_childObjects) const;
 
 		// members
 		ObjectData                                 data;
@@ -200,18 +200,9 @@ namespace Game
 		std::vector<Object>                        childObjects;
 	};
 
-	class RootObject : public Object
-	{
-	public:
-		RootObject() = default;
-		explicit RootObject(const Config::FilterData& a_filter, const Config::ObjectData& a_data);
-
-		void SpawnObject(RE::TESDataHandler* a_dataHandler, Manager* a_mgr, const Params& a_params, std::uint32_t& a_numHandles) const;
-	};
-
-	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::RootObject>>;
-	using EditorIDObjectMap = StringMap<std::vector<Game::RootObject>>;
-	using FormTypeObjectMap = FlatMap<RE::FormType, std::vector<Game::RootObject>>;
+	using FormIDObjectMap = FlatMap<std::variant<RE::FormID, std::string>, std::vector<Game::Object>>;
+	using EditorIDObjectMap = StringMap<std::vector<Game::Object>>;
+	using FormTypeObjectMap = FlatMap<RE::FormType, std::vector<Game::Object>>;
 
 	struct Format
 	{
@@ -222,8 +213,8 @@ namespace Game
 			objectTypes.clear();
 		}
 
-		std::vector<Game::RootObject>* FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base);
-		std::vector<Game::RootObject>* FindObjects(const RE::TESBoundObject* a_base);
+		std::vector<Game::Object>* FindObjects(const RE::TESObjectREFR* a_ref, const RE::TESBoundObject* a_base);
+		std::vector<Game::Object>* FindObjects(const RE::TESBoundObject* a_base);
 
 		void SpawnInCell(RE::TESObjectCELL* a_cell);
 		void SpawnAtReference(RE::TESObjectREFR* a_ref);

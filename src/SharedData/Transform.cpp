@@ -20,9 +20,9 @@ namespace RE
 	NiPoint3 Point3Range::value(std::size_t seed) const
 	{
 		return {
-			x.value(hash::combine(seed, 0)),
-			y.value(hash::combine(seed, 1)),
-			z.value(hash::combine(seed, 2))
+			x.has_range() ? clib_util::RNG(hash::combine(seed, 0)).generate(x.min, x.max) : x.min,
+			y.has_range() ? clib_util::RNG(hash::combine(seed, 1)).generate(y.min, y.max) : y.min,
+			z.has_range() ? clib_util::RNG(hash::combine(seed, 2)).generate(z.min, z.max) : z.min,
 		};
 	}
 

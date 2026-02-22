@@ -41,7 +41,8 @@ namespace Base
 		WeightedObjects() = default;
 		WeightedObjects(const WeightedObjects& other) :
 			objects(other.objects),
-			weights(other.weights)
+			weights(other.weights),
+			flags(other.flags)
 		{}
 
 		explicit WeightedObjects(const WeightedObjects<std::string>& other)
@@ -98,9 +99,9 @@ namespace Base
 	private:
 		bool are_weights_equal() const
 		{
-			return std::ranges::all_of(weights, [&](const auto& w) { return w == weights.front(); });
+			return !weights.empty() && std::ranges::all_of(weights, [&](const auto& w) { return w == weights.front(); });
 		}
-
+		
 		[[nodiscard]] friend std::size_t hash_value(const WeightedObjects<std::string>& a_val) noexcept
 			requires std::is_same_v<std::string, T>
 		{
@@ -112,9 +113,9 @@ namespace Base
 		{
 			std::size_t seed = 0;
 			for (const auto* obj : a_val.objects) {
-				hash::combine(seed, RE::RawFormID(obj ? obj->GetFormID() : 0));
+				boost::hash_combine(seed, RE::RawFormID(obj ? obj->GetFormID() : 0));
 			}
-			hash::combine(seed, a_val.weights);
+			boost::hash_combine(seed, a_val.weights);
 			return seed;
 		}
 	};

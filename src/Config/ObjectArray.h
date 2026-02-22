@@ -54,6 +54,7 @@ namespace Config
 		struct Word
 		{
 			static void InitCharMap();
+			static void ClearCharMap();
 
 			void GetTransforms(const RE::BSTransform& a_pivot, std::vector<RE::BSTransform>& a_transforms) const;
 

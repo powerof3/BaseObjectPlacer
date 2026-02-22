@@ -54,9 +54,9 @@ std::pair<bool, bool> Manager::ReadConfigs(bool a_reload)
 	if (a_reload) {
 		configs.clear();
 		cachedPrefabs.clear();
-	} else {
-		ConfigObjectArray::Word::InitCharMap();
+		ConfigObjectArray::Word::ClearCharMap();
 	}
+	ConfigObjectArray::Word::InitCharMap();
 
 	std::vector<std::filesystem::path> paths;
 
@@ -188,15 +188,9 @@ const Config::Prefab* Manager::GetPrefab(std::string_view a_uuid) const
 void Manager::ProcessConfigs()
 {
 	auto process_and_merge = [](auto& config_objs, const auto& context, auto& vec) {
-		std::vector<Game::RootObject> temp;
-		temp.reserve(config_objs.size());
+		vec.reserve(config_objs.size());
 		for (auto& obj : config_objs) {
-			obj.CreateGameObject(temp, context);
-		}
-		if (!temp.empty()) {
-			vec.insert(vec.end(),
-				std::make_move_iterator(temp.begin()),
-				std::make_move_iterator(temp.end()));
+			obj.CreateGameObject(vec, context);
 		}
 	};
 

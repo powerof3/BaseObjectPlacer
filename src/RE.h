@@ -14,10 +14,14 @@ namespace RE
 
 		bool operator==(const Range& a_rhs) const { return min == a_rhs.min && max == a_rhs.max; }
 
+		[[nodiscard]] bool has_range() const
+		{
+			return max != std::numeric_limits<T>::max() && min != max;
+		}
+
 		[[nodiscard]] T value(std::size_t seed) const
 		{
-			return (max == std::numeric_limits<T>::max() || min == max) ? min :
-			                                                              clib_util::RNG(seed).generate<T>(min, max);
+			return !has_range() ? min : clib_util::RNG(seed).generate<T>(min, max);
 		}
 
 		[[nodiscard]] Range deg_to_rad() const

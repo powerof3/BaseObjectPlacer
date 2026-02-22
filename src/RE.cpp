@@ -114,17 +114,17 @@ namespace RE
 
 	std::uint32_t GetNumReferenceHandles()
 	{
-		const auto refrArray = BSPointerHandleManager<TESObjectREFR*>::GetHandleEntries();
-
-		std::uint32_t activeHandleCount = 0;
-
-		for (const auto& val : refrArray) {
-			if ((val.handleEntryBits & (1 << 26)) != 0) {
-				activeHandleCount++;
+		BSReadLockGuard locker(BSPointerHandleManager<TESObjectREFR*>::GetHandleManagerLock());
+		{
+			const auto refrArray = BSPointerHandleManager<TESObjectREFR*>::GetHandleEntries();
+			std::uint32_t activeHandleCount = 0;
+			for (const auto& entry : refrArray) {
+				if (entry.IsInUse()) { 
+					activeHandleCount++;
+				}
 			}
+			return activeHandleCount;
 		}
-
-		return activeHandleCount;
 	}
 
 	bool GetMaxFormIDReached()

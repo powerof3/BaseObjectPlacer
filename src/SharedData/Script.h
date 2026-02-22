@@ -78,6 +78,11 @@ namespace BSScript
 			}
 		}
 
+		bool operator==(const Script& a_rhs) const
+		{
+			return script == a_rhs.script;
+		}
+
 		std::string                            script;
 		std::vector<std::pair<std::string, T>> properties;
 		bool                                   autoFillProperties{ true };
