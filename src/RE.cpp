@@ -116,10 +116,10 @@ namespace RE
 	{
 		BSReadLockGuard locker(BSPointerHandleManager<TESObjectREFR*>::GetHandleManagerLock());
 		{
-			const auto refrArray = BSPointerHandleManager<TESObjectREFR*>::GetHandleEntries();
+			const auto    refrArray = BSPointerHandleManager<TESObjectREFR*>::GetHandleEntries();
 			std::uint32_t activeHandleCount = 0;
 			for (const auto& entry : refrArray) {
-				if (entry.IsInUse()) { 
+				if (entry.IsInUse()) {
 					activeHandleCount++;
 				}
 			}

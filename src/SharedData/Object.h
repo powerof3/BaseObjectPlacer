@@ -101,7 +101,7 @@ namespace Base
 		{
 			return !weights.empty() && std::ranges::all_of(weights, [&](const auto& w) { return w == weights.front(); });
 		}
-		
+
 		[[nodiscard]] friend std::size_t hash_value(const WeightedObjects<std::string>& a_val) noexcept
 			requires std::is_same_v<std::string, T>
 		{

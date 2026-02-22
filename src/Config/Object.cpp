@@ -176,7 +176,7 @@ namespace Config
 
 		logger::info("\tProcessing root object with prefab {}", resolvedPrefab->uuid);
 
-		Game::Object  rootObject(filter, resolvedPrefab->data);
+		Game::Object      rootObject(filter, resolvedPrefab->data);
 		const std::size_t rootHash = hash::combine(pathHash, a_attachID, GenerateRootHash(), *resolvedPrefab);
 
 		for (auto&& [transformIdx, transformRange] : std::views::enumerate(transforms)) {
